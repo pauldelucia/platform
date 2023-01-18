@@ -1,7 +1,7 @@
 use crate::data_contract::DataContract;
 use crate::identifier::Identifier;
 use crate::identity::contract_bounds::ContractBounds::{
-    NoContractBounds, SingleContract, SingleContractDocumentType,
+    NoBounds, SingleContract, SingleContractDocumentType,
 };
 use crate::identity::identity_public_key::CborValue;
 use crate::util::cbor_value::{CborCanonicalMap, CborMapExtension};
@@ -18,14 +18,23 @@ pub type ContractBoundsType = u8;
 /// within the specified contract.
 /// For encryption decryption this tells clients to only use these keys for specific
 /// contracts.
+///
+#[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum ContractBounds {
-    /// the key is for general use
-    NoContractBounds,
+    /// this is equivalent to not setting the contract bounds
+    #[serde(rename = "none")]
+    NoBounds = 0,
     /// this key can only be used within a specific contract
-    SingleContract(Identifier),
+    #[serde(rename = "singleContract")]
+    SingleContract { id: Identifier } = 1,
     /// this key can only be used within a specific contract and for a specific document type
-    SingleContractDocumentType(Identifier, String),
+    #[serde(rename = "documentType")]
+    SingleContractDocumentType {
+        id: Identifier,
+        document_type: String,
+    } = 2,
 }
 
 impl ContractBounds {
@@ -36,12 +45,14 @@ impl ContractBounds {
         document_type: String,
     ) -> Result<Self, ProtocolError> {
         Ok(match contract_bounds_type {
-            0 => NoContractBounds,
-            1 => SingleContract(Identifier::from_bytes(identifier.as_slice())?),
-            2 => SingleContractDocumentType(
-                Identifier::from_bytes(identifier.as_slice())?,
+            0 => NoBounds,
+            1 => SingleContract {
+                id: Identifier::from_bytes(identifier.as_slice())?,
+            },
+            2 => SingleContractDocumentType {
+                id: Identifier::from_bytes(identifier.as_slice())?,
                 document_type,
-            ),
+            },
             _ => {
                 return Err(ProtocolError::InvalidKeyContractBoundsError(format!(
                     "unrecognized contract bounds type: {}",
@@ -54,27 +65,46 @@ impl ContractBounds {
     /// Gets the contract bounds type
     pub fn contract_bounds_type(&self) -> ContractBoundsType {
         match self {
-            NoContractBounds => 0,
-            SingleContract(_) => 1,
-            SingleContractDocumentType(_, _) => 2,
+            NoBounds => 1,
+            SingleContract { .. } => 2,
+            SingleContractDocumentType { .. } => 3,
+        }
+    }
+
+    pub fn contract_bounds_type_from_str(str: &str) -> Result<ContractBoundsType, ProtocolError> {
+        match str {
+            "none" => Ok(0),
+            "singleContract" => Ok(1),
+            "singleContractDocumentType" => Ok(2),
+            _ => Err(ProtocolError::DecodingError(String::from(
+                "Expected type to be one of none, singleContract or singleContractDocumentType",
+            ))),
+        }
+    }
+    /// Gets the contract bounds type
+    pub fn contract_bounds_type_string(&self) -> &str {
+        match self {
+            NoBounds => "none",
+            SingleContract { .. } => "singleContract",
+            SingleContractDocumentType { .. } => "singleContractDocumentType",
         }
     }
 
     /// Gets the identifier
     pub fn identifier(&self) -> Option<&Identifier> {
         match self {
-            NoContractBounds => None,
-            SingleContract(identifier) => Some(identifier),
-            SingleContractDocumentType(identifier, _) => Some(identifier),
+            NoBounds => None,
+            SingleContract { id } => Some(id),
+            SingleContractDocumentType { id, .. } => Some(id),
         }
     }
 
     /// Gets the document type
     pub fn document_type(&self) -> Option<&String> {
         match self {
-            NoContractBounds => None,
-            SingleContract(_) => None,
-            SingleContractDocumentType(_, document_type) => Some(document_type),
+            NoBounds => None,
+            SingleContract { .. } => None,
+            SingleContractDocumentType { document_type, .. } => Some(document_type),
         }
     }
 
@@ -83,7 +113,7 @@ impl ContractBounds {
         let mut pk_map = CborCanonicalMap::new();
 
         let contract_bounds_type = self.contract_bounds_type();
-        pk_map.insert("type", self.contract_bounds_type());
+        pk_map.insert("type", self.contract_bounds_type_string());
 
         if contract_bounds_type > 0 {
             pk_map.insert("identifier", self.identifier().unwrap().to_buffer_vec());
@@ -103,8 +133,10 @@ impl ContractBounds {
             ))
         })?;
 
+        let contract_bounds_type_string =
+            key_value_map.as_string("type", "Contract bounds must have a type")?;
         let contract_bounds_type =
-            key_value_map.as_u8("type", "Contract bounds must have a type")?;
+            Self::contract_bounds_type_from_str(contract_bounds_type_string.as_str())?;
         let contract_bounds_identifier = if contract_bounds_type > 0 {
             key_value_map.as_vec(
                 "identifier",

@@ -179,6 +179,7 @@ mod test {
     use std::convert::TryInto;
 
     use crate::document::DocumentsBatchTransition;
+    use crate::identity::contract_bounds::ContractBounds;
     use crate::state_transition::state_transition_execution_context::StateTransitionExecutionContext;
     use crate::util::string_encoding::Encoding;
     use crate::{
@@ -190,7 +191,6 @@ mod test {
         util::hash::ripemd160_sha256,
         NativeBlsModule,
     };
-    use crate::identity::contract_bounds::ContractBounds;
 
     use super::StateTransitionIdentitySigned;
     use super::*;
@@ -320,7 +320,7 @@ mod test {
             data: ec_public_compressed_bytes.try_into().unwrap(),
             read_only: false,
             disabled_at: None,
-            contract_bounds: ContractBounds::NoContractBounds,
+            contract_bounds: None,
         };
 
         Keys {

@@ -165,12 +165,12 @@ mod conversions {
 }
 
 mod api {
+    use crate::identity::contract_bounds::ContractBounds;
     use crate::{
         identity::{Purpose, SecurityLevel},
         prelude::IdentityPublicKey,
         tests::fixtures::identity_fixture,
     };
-    use crate::identity::contract_bounds::ContractBounds;
 
     #[test]
     fn should_get_biggest_public_key_id() {
@@ -184,7 +184,7 @@ mod api {
             security_level: SecurityLevel::MASTER,
             read_only: false,
             disabled_at: None,
-            contract_bounds: ContractBounds::NoContractBounds,
+            contract_bounds: None,
         };
         let identity_public_key_2 = IdentityPublicKey {
             id: 50,
@@ -194,7 +194,7 @@ mod api {
             security_level: SecurityLevel::MASTER,
             read_only: false,
             disabled_at: None,
-            contract_bounds: ContractBounds::NoContractBounds,
+            contract_bounds: None,
         };
 
         identity.add_public_keys([identity_public_key_1, identity_public_key_2]);

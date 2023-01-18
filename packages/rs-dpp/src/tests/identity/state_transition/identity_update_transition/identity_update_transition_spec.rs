@@ -1,6 +1,7 @@
 use chrono::Utc;
 use serde_json::{json, Value as JsonValue};
 
+use crate::identity::contract_bounds::ContractBounds;
 use crate::identity::IdentityPublicKeyInCreation;
 use crate::{
     identity::{
@@ -16,7 +17,6 @@ use crate::{
     },
     util::string_encoding::Encoding,
 };
-use crate::identity::contract_bounds::ContractBounds;
 
 struct TestData {
     transition: IdentityUpdateTransition,
@@ -85,7 +85,7 @@ fn set_public_keys_to_add() {
             read_only: true,
             data: hex::decode("01fac99ca2c8f39c286717c213e190aba4b7af76db320ec43f479b7d9a2012313a0ae59ca576edf801444bc694686694").unwrap(),
             signature : Default::default(),
-        contract_bounds: ContractBounds::NoContractBounds,
+        contract_bounds: None,
     };
     transition.set_public_keys_to_add(vec![id_public_key.clone()]);
 
@@ -151,6 +151,7 @@ fn to_object() {
                 "purpose" : 0,
                 "type": 0,
                 "securityLevel" : 0,
+                "contractBounds": null,
                 "data" :base64::decode("AkVuTKyF3YgKLAQlLEtaUL2HTditwGILfWUVqjzYnIgH").unwrap(),
                 "readOnly" : false,
                 "signature" : vec![0;65]
@@ -183,6 +184,7 @@ fn to_object_with_signature_skipped() {
                 "purpose" : 0,
                 "type": 0,
                 "securityLevel" : 0,
+                "contractBounds": null,
                 "data" :base64::decode("AkVuTKyF3YgKLAQlLEtaUL2HTditwGILfWUVqjzYnIgH").unwrap(),
                 "readOnly" : false
             }
@@ -215,6 +217,7 @@ fn to_json() {
                 "purpose" : 0,
                 "type": 0,
                 "securityLevel" : 0,
+                "contractBounds": null,
                 "data" : "AkVuTKyF3YgKLAQlLEtaUL2HTditwGILfWUVqjzYnIgH",
                 "readOnly" : false,
                 "signature" : base64::encode(vec![0;65]).to_string(),

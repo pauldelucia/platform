@@ -20,7 +20,7 @@ pub fn identity_fixture_raw_object() -> serde_json::Value {
                 "securityLevel": 0,
                 "contractBounds":
                 {
-                    "type": 0,
+                    "type": "none",
                 },
                 "data": decode("AuryIuMtRrl/VviQuyLD1l4nmxi9ogPzC9LT7tdpo0di", Encoding::Base64).unwrap(),
                 "readOnly": false
@@ -32,7 +32,7 @@ pub fn identity_fixture_raw_object() -> serde_json::Value {
                 "securityLevel": 3,
                 "contractBounds":
                 {
-                    "type": 0,
+                    "type": "none",
                 },
                 "data": decode("A8AK95PYMVX5VQKzOhcVQRCUbc9pyg3RiL7jttEMDU+L", Encoding::Base64).unwrap(),
                 "readOnly": false
@@ -55,7 +55,7 @@ pub fn identity_fixture_json() -> serde_json::Value {
                 "securityLevel": 0,
                 "contractBounds":
                 {
-                    "type": 0,
+                    "type": "none",
                 },
                 "data": "AuryIuMtRrl/VviQuyLD1l4nmxi9ogPzC9LT7tdpo0di",
                 "readOnly": false
@@ -67,7 +67,7 @@ pub fn identity_fixture_json() -> serde_json::Value {
                 "securityLevel": 3,
                 "contractBounds":
                 {
-                    "type": 0,
+                    "type": "none",
                 },
                 "data": "A8AK95PYMVX5VQKzOhcVQRCUbc9pyg3RiL7jttEMDU+L",
                 "readOnly": false

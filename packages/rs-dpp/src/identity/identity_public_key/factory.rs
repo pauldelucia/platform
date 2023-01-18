@@ -1,4 +1,3 @@
-use crate::identity::contract_bounds::ContractBounds::NoContractBounds;
 use crate::identity::key_type::KEY_TYPE_MAX_SIZE_TYPE;
 use crate::identity::KeyType::ECDSA_SECP256K1;
 use crate::identity::Purpose::AUTHENTICATION;
@@ -94,7 +93,7 @@ impl IdentityPublicKey {
             key_type,
             purpose: AUTHENTICATION,
             security_level,
-            contract_bounds: NoContractBounds,
+            contract_bounds: None,
             read_only,
             disabled_at: None,
             data,
@@ -147,7 +146,7 @@ impl IdentityPublicKey {
             key_type,
             purpose,
             security_level,
-            contract_bounds: NoContractBounds,
+            contract_bounds: None,
             read_only,
             disabled_at: None,
             data,
@@ -166,7 +165,7 @@ impl IdentityPublicKey {
             key_type,
             purpose,
             security_level,
-            contract_bounds: NoContractBounds,
+            contract_bounds: None,
             read_only,
             disabled_at: None,
             data,
@@ -184,7 +183,7 @@ impl IdentityPublicKey {
             key_type,
             purpose,
             security_level,
-            contract_bounds: NoContractBounds,
+            contract_bounds: None,
             read_only,
             disabled_at: None,
             data,

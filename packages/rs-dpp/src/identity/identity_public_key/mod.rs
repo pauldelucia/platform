@@ -41,7 +41,7 @@ pub struct IdentityPublicKey {
     pub id: KeyID,
     pub purpose: Purpose,
     pub security_level: SecurityLevel,
-    pub contract_bounds: ContractBounds,
+    pub contract_bounds: Option<ContractBounds>,
     #[serde(rename = "type")]
     pub key_type: KeyType,
     pub read_only: bool,
@@ -173,14 +173,9 @@ impl IdentityPublicKey {
             "Identity public key must have a securityLevel",
         )?;
 
-        let contract_bounds =
-            get_key_from_cbor_map(key_value_map, "contractBounds").ok_or_else(|| {
-                ProtocolError::DecodingError(String::from(
-                    "Identity public key must have contractBounds",
-                ))
-            })?;
-
-        let contract_bounds = ContractBounds::from_cbor_value(contract_bounds)?;
+        let contract_bounds = get_key_from_cbor_map(key_value_map, "contractBounds")
+            .map(ContractBounds::from_cbor_value)
+            .transpose()?;
 
         let readonly =
             key_value_map.as_bool("readOnly", "Identity public key must have a readOnly")?;

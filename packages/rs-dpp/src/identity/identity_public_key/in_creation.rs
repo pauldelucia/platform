@@ -24,7 +24,7 @@ pub struct IdentityPublicKeyInCreation {
     pub id: KeyID,
     pub purpose: Purpose,
     pub security_level: SecurityLevel,
-    pub contract_bounds: ContractBounds,
+    pub contract_bounds: Option<ContractBounds>,
     #[serde(rename = "type")]
     pub key_type: KeyType,
     pub data: Vec<u8>,
@@ -108,14 +108,10 @@ impl IdentityPublicKeyInCreation {
             "Identity public key must have a securityLevel",
         )?;
 
-        let contract_bounds =
-            get_key_from_cbor_map(key_value_map, "contractBounds").ok_or_else(|| {
-                ProtocolError::DecodingError(String::from(
-                    "Identity public key must have contractBounds",
-                ))
-            })?;
+        let contract_bounds = get_key_from_cbor_map(key_value_map, "contractBounds")
+            .map(ContractBounds::from_cbor_value)
+            .transpose()?;
 
-        let contract_bounds = ContractBounds::from_cbor_value(contract_bounds)?;
         let readonly =
             key_value_map.as_bool("readOnly", "Identity public key must have a readOnly")?;
         let public_key_bytes =
@@ -143,7 +139,9 @@ impl IdentityPublicKeyInCreation {
         pk_map.insert("purpose", self.purpose);
         pk_map.insert("readOnly", self.read_only);
         pk_map.insert("securityLevel", self.security_level);
-        pk_map.insert("contractBounds", self.contract_bounds.to_cbor_value());
+        if let Some(contract_bounds) = &self.contract_bounds {
+            pk_map.insert("contractBounds", contract_bounds.to_cbor_value());
+        }
 
         if !self.signature.is_empty() {
             pk_map.insert("signature", self.signature.as_slice())

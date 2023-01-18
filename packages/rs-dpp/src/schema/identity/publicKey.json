@@ -45,11 +45,11 @@
 				"type": "object",
 				"properties": {
 					"type": {
-						"type": "integer",
+						"type": "string",
 						"enum": [
-							0,
-							1,
-							2
+							"none",
+							"singleContract",
+							"documentType"
 						]
 					}
 				},
@@ -60,10 +60,10 @@
 								"type": {
 									"oneOf" : [
 										{
-											"const": 1
+											"const": "singleContract"
 										},
 										{
-											"const": 2
+											"const": "documentType"
 										}
 									]
 								}
@@ -88,7 +88,7 @@
 						"if": {
 							"properties": {
 								"type": {
-									"const": 2
+									"const": "documentType"
 								}
 							}
 						},
