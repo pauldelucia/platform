@@ -29,6 +29,7 @@ use jsonschema::error::ValidationErrorKind;
 use serde_json::{json, Value as JsonValue};
 use std::{convert::TryInto, sync::Arc};
 use test_case::test_case;
+use crate::identity::contract_bounds::ContractBounds;
 
 struct TestData {
     protocol_version_validator: ProtocolVersionValidator,
@@ -75,6 +76,7 @@ fn setup_test() -> TestData {
         data: ec_public_key.try_into().unwrap(),
         read_only: false,
         disabled_at: None,
+        contract_bounds: ContractBounds::NoContractBounds,
     };
 
     state_transition

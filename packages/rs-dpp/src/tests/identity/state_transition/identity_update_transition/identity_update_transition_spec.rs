@@ -16,6 +16,7 @@ use crate::{
     },
     util::string_encoding::Encoding,
 };
+use crate::identity::contract_bounds::ContractBounds;
 
 struct TestData {
     transition: IdentityUpdateTransition,
@@ -84,7 +85,8 @@ fn set_public_keys_to_add() {
             read_only: true,
             data: hex::decode("01fac99ca2c8f39c286717c213e190aba4b7af76db320ec43f479b7d9a2012313a0ae59ca576edf801444bc694686694").unwrap(),
             signature : Default::default(),
-        };
+        contract_bounds: ContractBounds::NoContractBounds,
+    };
     transition.set_public_keys_to_add(vec![id_public_key.clone()]);
 
     assert_eq!(vec![id_public_key], transition.get_public_keys_to_add());

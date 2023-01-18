@@ -9,6 +9,7 @@ use crate::{
     tests::utils::generate_random_identifier_struct,
     version::LATEST_VERSION,
 };
+use crate::identity::contract_bounds::ContractBounds;
 
 pub fn get_identity_update_transition_fixture() -> IdentityUpdateTransition {
     IdentityUpdateTransition {
@@ -24,6 +25,7 @@ pub fn get_identity_update_transition_fixture() -> IdentityUpdateTransition {
             data: base64::decode("AkVuTKyF3YgKLAQlLEtaUL2HTditwGILfWUVqjzYnIgH").unwrap(),
             security_level: SecurityLevel::MASTER,
             signature: vec![0; 65],
+            contract_bounds: ContractBounds::NoContractBounds,
         }],
         disable_public_keys: vec![0],
         public_keys_disabled_at: Some(1234567),

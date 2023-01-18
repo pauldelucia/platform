@@ -11,7 +11,7 @@ use bincode::{deserialize, serialize};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::format;
 
-pub type ContractBoundsType = u16;
+pub type ContractBoundsType = u8;
 
 /// A contract bounds is the bounds that the key has influence on.
 /// For authentication keys the bounds mean that the keys can only be used to sign

@@ -190,6 +190,7 @@ mod test {
         util::hash::ripemd160_sha256,
         NativeBlsModule,
     };
+    use crate::identity::contract_bounds::ContractBounds;
 
     use super::StateTransitionIdentitySigned;
     use super::*;
@@ -319,6 +320,7 @@ mod test {
             data: ec_public_compressed_bytes.try_into().unwrap(),
             read_only: false,
             disabled_at: None,
+            contract_bounds: ContractBounds::NoContractBounds,
         };
 
         Keys {

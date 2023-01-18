@@ -8,6 +8,7 @@ use neon::prelude::*;
 use neon::types::buffer::TypedArray;
 use num::FromPrimitive;
 use std::borrow::Borrow;
+use drive::dpp::identity::contract_bounds::{ContractBounds, ContractBoundsType};
 
 fn element_to_string(element: &Element) -> &'static str {
     match element {
@@ -427,6 +428,26 @@ pub fn js_object_to_identity_public_key<'a, C: Context<'a>>(
     let js_id: Handle<JsNumber> = js_object.get(cx, "id")?;
     let js_purpose: Handle<JsNumber> = js_object.get(cx, "purpose")?;
     let js_security_level: Handle<JsNumber> = js_object.get(cx, "securityLevel")?;
+    let js_contract_bounds: Handle<JsObject> = js_object.get(cx, "contractBounds")?;
+
+    let js_contract_bounds_type: Handle<JsNumber> = js_contract_bounds.get(cx, "type")?;
+
+    let contract_bounds_type = ContractBoundsType::try_from(js_contract_bounds_type.value(cx) as u8)
+        .or_else(|_| cx.throw_range_error("`contractBounds type` value is incorrect"))?;
+
+    let contract_bounds_identifier = if contract_bounds_type > 0 {
+        let js_contract_identifier: Handle<JsBuffer> = js_contract_bounds.get(cx, "identifier")?;
+        js_buffer_to_identifier(cx, js_contract_identifier)?.to_vec()
+    } else {
+        vec![]
+    };
+    let contract_bounds_document_type = if contract_bounds_type == 2 {
+        let js_contract_document_type: Handle<JsString> = js_contract_bounds.get(cx, "documentType")?;
+        js_contract_document_type.value(cx)
+    } else {
+        String::new()
+    };
+
     let js_key_type: Handle<JsNumber> = js_object.get(cx, "type")?;
     let js_read_only: Handle<JsBoolean> = js_object.get(cx, "readOnly")?;
     let js_data: Handle<JsBuffer> = js_object.get(cx, "data")?;
@@ -439,6 +460,9 @@ pub fn js_object_to_identity_public_key<'a, C: Context<'a>>(
 
     let security_level = SecurityLevel::try_from(js_security_level.value(cx) as u8)
         .or_else(|_| cx.throw_range_error("`securityLevel` value is incorrect"))?;
+
+    let contract_bounds = ContractBounds::new_from_type(contract_bounds_type, contract_bounds_identifier, contract_bounds_document_type)
+        .or_else(|_| cx.throw_range_error("`contractBounds type` value is incorrect"))?;
 
     let key_type = KeyType::try_from(js_key_type.value(cx) as u8)
         .or_else(|_| cx.throw_range_error("`keyType` value is incorrect"))?;
@@ -458,6 +482,7 @@ pub fn js_object_to_identity_public_key<'a, C: Context<'a>>(
         id,
         purpose,
         security_level,
+        contract_bounds,
         key_type,
         read_only,
         data,
