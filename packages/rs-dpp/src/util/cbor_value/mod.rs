@@ -82,7 +82,7 @@ impl CborMapExtension for &Vec<(CborValue, CborValue)> {
         Err(ProtocolError::DecodingError(String::from(error_message)))
     }
 
-    fn as_bytes(&self, key: &str, error_message: &str) -> Result<Vec<u8>, ProtocolError> {
+    fn as_vec(&self, key: &str, error_message: &str) -> Result<Vec<u8>, ProtocolError> {
         let key_value = get_key_from_cbor_map(self, key)
             .ok_or_else(|| ProtocolError::DecodingError(String::from(error_message)))?;
         match key_value {

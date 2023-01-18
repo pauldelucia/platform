@@ -1,6 +1,8 @@
 use ciborium::value::Value as CborValue;
+use ciborium::Value;
 use std::{collections::BTreeMap, convert::TryInto};
 
+use crate::util::cbor_value::get_key_from_cbor_map;
 use crate::ProtocolError;
 
 use super::value_to_bytes;
@@ -18,7 +20,7 @@ pub trait CborMapExtension {
     fn as_u16(&self, key: &str, error_message: &str) -> Result<u16, ProtocolError>;
     fn as_u8(&self, key: &str, error_message: &str) -> Result<u8, ProtocolError>;
     fn as_bool(&self, key: &str, error_message: &str) -> Result<bool, ProtocolError>;
-    fn as_bytes(&self, key: &str, error_message: &str) -> Result<Vec<u8>, ProtocolError>;
+    fn as_vec(&self, key: &str, error_message: &str) -> Result<Vec<u8>, ProtocolError>;
     fn as_string(&self, key: &str, error_message: &str) -> Result<String, ProtocolError>;
     fn as_u64(&self, key: &str, error_message: &str) -> Result<u64, ProtocolError>;
 }

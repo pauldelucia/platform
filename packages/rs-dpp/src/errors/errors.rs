@@ -101,6 +101,9 @@ pub enum ProtocolError {
         required_security_level: SecurityLevel,
     },
 
+    #[error("Invalid key contract bounds error {0}")]
+    InvalidKeyContractBoundsError(String),
+
     #[error("State Transition type is not present")]
     InvalidStateTransitionTypeError,
 

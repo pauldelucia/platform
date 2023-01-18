@@ -1,5 +1,6 @@
 #![allow(clippy::from_over_into)]
 
+pub mod contract_bounds;
 pub mod factory;
 mod in_creation;
 pub mod key_type;
@@ -19,13 +20,14 @@ use crate::errors::{InvalidVectorSizeError, ProtocolError};
 pub use crate::identity::key_type::KeyType;
 pub use crate::identity::purpose::Purpose;
 pub use crate::identity::security_level::SecurityLevel;
-use crate::util::cbor_value::{CborCanonicalMap, CborMapExtension};
+use crate::util::cbor_value::{get_key_from_cbor_map, CborCanonicalMap, CborMapExtension};
 use crate::util::hash::ripemd160_sha256;
 use crate::util::json_value::{JsonValueExt, ReplaceWith};
 use crate::util::vec;
 use crate::SerdeParsingError;
 use bincode::{deserialize, serialize};
 
+use crate::identity::contract_bounds::ContractBounds;
 pub use in_creation::IdentityPublicKeyInCreation;
 
 pub type KeyID = u32;
@@ -39,6 +41,7 @@ pub struct IdentityPublicKey {
     pub id: KeyID,
     pub purpose: Purpose,
     pub security_level: SecurityLevel,
+    pub contract_bounds: ContractBounds,
     #[serde(rename = "type")]
     pub key_type: KeyType,
     pub read_only: bool,
@@ -53,6 +56,7 @@ impl std::convert::Into<IdentityPublicKeyInCreation> for &IdentityPublicKey {
             id: self.id,
             purpose: self.purpose,
             security_level: self.security_level,
+            contract_bounds: self.contract_bounds.clone(),
             key_type: self.key_type,
             read_only: self.read_only,
             data: self.data.clone(),
@@ -168,16 +172,27 @@ impl IdentityPublicKey {
             "securityLevel",
             "Identity public key must have a securityLevel",
         )?;
+
+        let contract_bounds =
+            get_key_from_cbor_map(key_value_map, "contractBounds").ok_or_else(|| {
+                ProtocolError::DecodingError(String::from(
+                    "Identity public key must have contractBounds",
+                ))
+            })?;
+
+        let contract_bounds = ContractBounds::from_cbor_value(contract_bounds)?;
+
         let readonly =
             key_value_map.as_bool("readOnly", "Identity public key must have a readOnly")?;
         let public_key_bytes =
-            key_value_map.as_bytes("data", "Identity public key must have a data")?;
+            key_value_map.as_vec("data", "Identity public key must have a data")?;
         let disabled_at = key_value_map.as_u64("disabledAt", "").ok();
 
         Ok(IdentityPublicKey {
             id: id.into(),
             purpose: purpose.try_into()?,
             security_level: security_level.try_into()?,
+            contract_bounds,
             key_type: key_type.try_into()?,
             data: public_key_bytes,
             read_only: readonly,

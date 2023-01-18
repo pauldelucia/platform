@@ -1,5 +1,5 @@
 use crate::identity::{
-    IdentityPublicKey, KeyID, KeyType, Purpose, SecurityLevel, BINARY_DATA_FIELDS,
+    contract_bounds, IdentityPublicKey, KeyID, KeyType, Purpose, SecurityLevel, BINARY_DATA_FIELDS,
 };
 use ciborium::value::Value as CborValue;
 use std::convert::TryInto;
@@ -10,7 +10,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value as JsonValue;
 
 use crate::errors::{InvalidVectorSizeError, ProtocolError};
-use crate::util::cbor_value::{CborCanonicalMap, CborMapExtension};
+use crate::identity::contract_bounds::{ContractBounds, ContractBoundsType};
+use crate::util::cbor_value::{get_key_from_cbor_map, CborCanonicalMap, CborMapExtension};
 use crate::util::hash::ripemd160_sha256;
 use crate::util::json_value::{JsonValueExt, ReplaceWith};
 use crate::util::vec;
@@ -23,6 +24,7 @@ pub struct IdentityPublicKeyInCreation {
     pub id: KeyID,
     pub purpose: Purpose,
     pub security_level: SecurityLevel,
+    pub contract_bounds: ContractBounds,
     #[serde(rename = "type")]
     pub key_type: KeyType,
     pub data: Vec<u8>,
@@ -39,6 +41,7 @@ impl IdentityPublicKeyInCreation {
             id,
             purpose,
             security_level,
+            contract_bounds,
             key_type,
             data,
             read_only,
@@ -48,6 +51,7 @@ impl IdentityPublicKeyInCreation {
             id,
             purpose,
             security_level,
+            contract_bounds,
             key_type,
             data,
             read_only,
@@ -103,16 +107,26 @@ impl IdentityPublicKeyInCreation {
             "securityLevel",
             "Identity public key must have a securityLevel",
         )?;
+
+        let contract_bounds =
+            get_key_from_cbor_map(key_value_map, "contractBounds").ok_or_else(|| {
+                ProtocolError::DecodingError(String::from(
+                    "Identity public key must have contractBounds",
+                ))
+            })?;
+
+        let contract_bounds = ContractBounds::from_cbor_value(contract_bounds)?;
         let readonly =
             key_value_map.as_bool("readOnly", "Identity public key must have a readOnly")?;
         let public_key_bytes =
-            key_value_map.as_bytes("data", "Identity public key must have a data")?;
-        let signature_bytes = key_value_map.as_bytes("signature", "").unwrap_or_default();
+            key_value_map.as_vec("data", "Identity public key must have a data")?;
+        let signature_bytes = key_value_map.as_vec("signature", "").unwrap_or_default();
 
         Ok(IdentityPublicKeyInCreation {
             id: id.into(),
             purpose: purpose.try_into()?,
             security_level: security_level.try_into()?,
+            contract_bounds,
             key_type: key_type.try_into()?,
             data: public_key_bytes,
             read_only: readonly,
@@ -129,6 +143,7 @@ impl IdentityPublicKeyInCreation {
         pk_map.insert("purpose", self.purpose);
         pk_map.insert("readOnly", self.read_only);
         pk_map.insert("securityLevel", self.security_level);
+        pk_map.insert("contractBounds", self.contract_bounds.to_cbor_value());
 
         if !self.signature.is_empty() {
             pk_map.insert("signature", self.signature.as_slice())
@@ -144,6 +159,7 @@ impl std::convert::Into<IdentityPublicKey> for &IdentityPublicKeyInCreation {
             id: self.id,
             purpose: self.purpose,
             security_level: self.security_level,
+            contract_bounds: self.contract_bounds.clone(),
             key_type: self.key_type,
             read_only: self.read_only,
             data: self.data.clone(),

@@ -1,3 +1,4 @@
+use crate::identity::contract_bounds::ContractBounds::NoContractBounds;
 use crate::identity::KeyID;
 use getrandom::getrandom;
 use lazy_static::lazy_static;
@@ -36,6 +37,7 @@ pub fn get_biggest_possible_identity() -> Identity {
                     key_type: KeyType::BLS12_381,
                     purpose: Purpose::AUTHENTICATION,
                     security_level,
+                    contract_bounds: NoContractBounds,
                     read_only: false,
                     data: vec![255u8; 48],
 
