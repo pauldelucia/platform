@@ -23,18 +23,15 @@ pub type ContractBoundsType = u8;
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ContractBounds {
-    /// this is equivalent to not setting the contract bounds
-    #[serde(rename = "none")]
-    NoBounds = 0,
     /// this key can only be used within a specific contract
     #[serde(rename = "singleContract")]
-    SingleContract { id: Identifier } = 1,
+    SingleContract { id: Identifier } = 0,
     /// this key can only be used within a specific contract and for a specific document type
     #[serde(rename = "documentType")]
     SingleContractDocumentType {
         id: Identifier,
         document_type: String,
-    } = 2,
+    } = 1,
 }
 
 impl ContractBounds {
@@ -45,11 +42,10 @@ impl ContractBounds {
         document_type: String,
     ) -> Result<Self, ProtocolError> {
         Ok(match contract_bounds_type {
-            0 => NoBounds,
-            1 => SingleContract {
+            0 => SingleContract {
                 id: Identifier::from_bytes(identifier.as_slice())?,
             },
-            2 => SingleContractDocumentType {
+            1 => SingleContractDocumentType {
                 id: Identifier::from_bytes(identifier.as_slice())?,
                 document_type,
             },
@@ -65,17 +61,15 @@ impl ContractBounds {
     /// Gets the contract bounds type
     pub fn contract_bounds_type(&self) -> ContractBoundsType {
         match self {
-            NoBounds => 1,
-            SingleContract { .. } => 2,
-            SingleContractDocumentType { .. } => 3,
+            SingleContract { .. } => 0,
+            SingleContractDocumentType { .. } => 1,
         }
     }
 
     pub fn contract_bounds_type_from_str(str: &str) -> Result<ContractBoundsType, ProtocolError> {
         match str {
-            "none" => Ok(0),
-            "singleContract" => Ok(1),
-            "singleContractDocumentType" => Ok(2),
+            "singleContract" => Ok(0),
+            "documentType" => Ok(1),
             _ => Err(ProtocolError::DecodingError(String::from(
                 "Expected type to be one of none, singleContract or singleContractDocumentType",
             ))),
@@ -84,25 +78,22 @@ impl ContractBounds {
     /// Gets the contract bounds type
     pub fn contract_bounds_type_string(&self) -> &str {
         match self {
-            NoBounds => "none",
             SingleContract { .. } => "singleContract",
-            SingleContractDocumentType { .. } => "singleContractDocumentType",
+            SingleContractDocumentType { .. } => "documentType",
         }
     }
 
     /// Gets the identifier
-    pub fn identifier(&self) -> Option<&Identifier> {
+    pub fn identifier(&self) -> &Identifier {
         match self {
-            NoBounds => None,
-            SingleContract { id } => Some(id),
-            SingleContractDocumentType { id, .. } => Some(id),
+            SingleContract { id } => id,
+            SingleContractDocumentType { id, .. } => id,
         }
     }
 
     /// Gets the document type
     pub fn document_type(&self) -> Option<&String> {
         match self {
-            NoBounds => None,
             SingleContract { .. } => None,
             SingleContractDocumentType { document_type, .. } => Some(document_type),
         }
@@ -115,11 +106,9 @@ impl ContractBounds {
         let contract_bounds_type = self.contract_bounds_type();
         pk_map.insert("type", self.contract_bounds_type_string());
 
-        if contract_bounds_type > 0 {
-            pk_map.insert("identifier", self.identifier().unwrap().to_buffer_vec());
-        }
+        pk_map.insert("identifier", self.identifier().to_buffer_vec());
 
-        if contract_bounds_type == 2 {
+        if contract_bounds_type == 1 {
             pk_map.insert("documentType", self.document_type().unwrap().clone());
         }
         pk_map.to_value_sorted()

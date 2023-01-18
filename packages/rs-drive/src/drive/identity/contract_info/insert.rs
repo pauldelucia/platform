@@ -13,14 +13,15 @@ use grovedb::{EstimatedLayerInformation, TransactionArg};
 use std::collections::HashMap;
 
 pub enum ContractApplyInfo {
-    Keys(Vec<IdentityPublicKey>),
+    ContractBoundKey(IdentityPublicKey),
+    DocumentTypeBoundKey(IdentityPublicKey),
 }
 
 impl Drive {
     pub(crate) fn add_contract_info_operations(
         &self,
         identity_id: [u8; 32],
-        contract_infos: Vec<([u8; 32], ContractApplyInfo)>,
+        contract_infos: Vec<([u8; 32], Vec<ContractApplyInfo>)>,
         epoch: &Epoch,
         estimated_costs_only_with_layer_info: &mut Option<
             HashMap<KeyInfoPath, EstimatedLayerInformation>,
@@ -43,7 +44,7 @@ impl Drive {
         let identity_contract_root_path =
             identity_contract_info_root_path_vec(identity_id.as_slice());
 
-        for (contract_id, contract_info) in contract_infos.into_iter() {
+        for (contract_id, contract_infos) in contract_infos.into_iter() {
             self.batch_insert_empty_tree_if_not_exists(
                 PathKeyInfo::<0>::PathKey((
                     identity_contract_root_path.clone(),
@@ -55,15 +56,17 @@ impl Drive {
                 &mut None,
                 &mut batch_operations,
             )?;
-            match contract_info {
-                ContractApplyInfo::Keys(keys) => {
-                    self.add_new_keys_to_identity_operations(
-                        identity_id,
-                        keys,
-                        false,
-                        estimated_costs_only_with_layer_info,
-                        transaction,
-                    )?;
+            for contract_info in contract_infos {
+                match contract_info {
+                    ContractApplyInfo::ContractBoundKey(key) => {
+                        self.add_new_keys_to_identity_operations(
+                            identity_id,
+                            keys,
+                            false,
+                            estimated_costs_only_with_layer_info,
+                            transaction,
+                        )?;
+                    }
                 }
             }
         }

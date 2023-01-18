@@ -194,6 +194,7 @@ impl Drive {
 
         let key_id_bytes = identity_key.id.encode_var_vec();
 
+        // first we must insert the key to storage
         self.insert_key_to_storage_operations(
             identity_id,
             &identity_key,
@@ -201,6 +202,12 @@ impl Drive {
             drive_operations,
         )?;
 
+        // if there are contract bounds we need to insert them
+        if let Some(Contract) = identity_key.contract_bounds {
+
+        }
+
+        // if we set that we wanted to add references we should construct those
         if with_references {
             if matches!(
                 identity_key.purpose,
