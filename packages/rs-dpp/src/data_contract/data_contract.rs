@@ -97,6 +97,11 @@ pub struct DataContract {
 
     #[serde(skip)]
     pub(crate) document_types: BTreeMap<DocumentName, DocumentType>,
+
+    /// Encryption key storage requirements
+    pub encryption_key_storage_requirements: Option<StorageKeyRequirements>,
+    /// Decryption key storage requirements
+    pub decryption_key_storage_requirements: Option<StorageKeyRequirements>,
 }
 
 impl DataContract {
@@ -140,6 +145,11 @@ impl DataContract {
         let owner_id: [u8; 32] = data_contract_map.get_identifier(property_names::OWNER_ID)?;
         let schema = data_contract_map.get_string(property_names::SCHEMA)?;
         let version = data_contract_map.get_u32(property_names::VERSION)?;
+
+        let encryption_key_storage_requirements =
+            data_contract_map.get(property_names::ENCRYPTION_KEY_REQUIREMENTS)?;
+        let decryption_key_storage_requirements =
+            data_contract_map.get_u32(property_names::DECRYPTION_KEY_REQUIREMENTS)?;
 
         // Defs
         let defs = data_contract_map
@@ -214,7 +224,9 @@ impl DataContract {
             entropy: [0; 32],
             binary_properties: Default::default(),
             document_types,
+            encryption_key_storage_requirements,
             config: mutability,
+            decryption_key_storage_requirements,
         };
 
         data_contract.generate_binary_properties();

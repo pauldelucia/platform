@@ -203,9 +203,13 @@ impl Drive {
         )?;
 
         // if there are contract bounds we need to insert them
-        if let Some(Contract) = identity_key.contract_bounds {
-
-        }
+        self.add_potential_contract_info_for_contract_bounded_key(
+            identity_id,
+            &identity_key,
+            estimated_costs_only_with_layer_info,
+            transaction,
+            drive_operations,
+        );
 
         // if we set that we wanted to add references we should construct those
         if with_references {

@@ -216,6 +216,8 @@
         "minimum": 1
       }
     },
+    "requiresIdentityEncryptionBoundedKey": 0,
+    "requiresIdentityDecryptionBoundedKey": 0,
     "required": [
       "$createdAt",
       "toUserId",

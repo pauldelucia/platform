@@ -29,6 +29,7 @@ mod drive_api;
 mod errors;
 mod index;
 mod mutability;
+mod storage_requirements;
 
 pub fn get_mutability(
     contract: &BTreeMap<String, CborValue>,

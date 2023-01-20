@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::TryInto;
 
+use crate::data_contract::extra::storage_requirements::keys_for_document_type::StorageKeyRequirements;
 use crate::data_contract::extra::ArrayFieldType;
+use crate::ProtocolError;
 use ciborium::value::Value;
 use serde::{Deserialize, Serialize};
 
@@ -25,16 +28,27 @@ pub const EMPTY_TREE_STORAGE_SIZE: usize = 33;
 pub const MAX_INDEX_SIZE: usize = 255;
 pub const STORAGE_FLAGS_SIZE: usize = 2;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct DocumentType {
+    /// The name of the Document Type
     pub name: String,
+    /// Document Type indices
     pub indices: Vec<Index>,
     #[serde(skip)]
+    /// The index structure of the document type
     pub index_structure: IndexLevel,
+    /// Properties of the document type
     pub properties: BTreeMap<String, DocumentField>,
+    /// The required fields on the document type
     pub required_fields: BTreeSet<String>,
+    /// Should documents keep history?
     pub documents_keep_history: bool,
+    /// Are documents mutable?
     pub documents_mutable: bool,
+    /// Encryption key storage requirements
+    pub encryption_key_storage_requirements: Option<StorageKeyRequirements>,
+    /// Decryption key storage requirements
+    pub decryption_key_storage_requirements: Option<StorageKeyRequirements>,
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
@@ -55,6 +69,8 @@ impl DocumentType {
         required_fields: BTreeSet<String>,
         documents_keep_history: bool,
         documents_mutable: bool,
+        encryption_key_storage_requirements: Option<StorageKeyRequirements>,
+        decryption_key_storage_requirements: Option<StorageKeyRequirements>,
     ) -> Self {
         let index_structure = Self::build_index_structure(indices.as_slice());
         DocumentType {
@@ -65,6 +81,8 @@ impl DocumentType {
             required_fields,
             documents_keep_history,
             documents_mutable,
+            encryption_key_storage_requirements,
+            decryption_key_storage_requirements,
         }
     }
     // index_names can be in any order
@@ -391,6 +409,36 @@ impl DocumentType {
 
         let index_structure = Self::build_index_structure(indices.as_slice());
 
+        // Are there encryption key storage requirements?
+        let encryption_key_storage_requirements: Option<StorageKeyRequirements> =
+            cbor_inner_u8_value(
+                document_type_value_map,
+                "requiresIdentityEncryptionBoundedKey",
+            )
+            .map(|v| {
+                v.try_into().map_err(|_| {
+                    ProtocolError::DecodingError(
+                        "requiresIdentityEncryptionBoundedKey too big".to_string(),
+                    )
+                })
+            })
+            .transpose()?;
+
+        // Are there decryption key storage requirements?
+        let decryption_key_storage_requirements: Option<StorageKeyRequirements> =
+            cbor_inner_u8_value(
+                document_type_value_map,
+                "requiresIdentityDecryptionBoundedKey",
+            )
+            .map(|v| {
+                v.try_into().map_err(|_| {
+                    ProtocolError::DecodingError(
+                        "requiresIdentityDecryptionBoundedKey too big".to_string(),
+                    )
+                })
+            })
+            .transpose()?;
+
         Ok(DocumentType {
             name: String::from(name),
             indices,
@@ -399,6 +447,8 @@ impl DocumentType {
             required_fields,
             documents_keep_history,
             documents_mutable,
+            encryption_key_storage_requirements,
+            decryption_key_storage_requirements,
         })
     }
 

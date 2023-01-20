@@ -1,7 +1,7 @@
 use crate::data_contract::DataContract;
 use crate::identifier::Identifier;
 use crate::identity::contract_bounds::ContractBounds::{
-    NoBounds, SingleContract, SingleContractDocumentType,
+    SingleContract, SingleContractDocumentType,
 };
 use crate::identity::identity_public_key::CborValue;
 use crate::util::cbor_value::{CborCanonicalMap, CborMapExtension};

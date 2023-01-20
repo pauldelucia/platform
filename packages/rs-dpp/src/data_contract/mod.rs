@@ -23,4 +23,6 @@ pub(self) mod property_names {
     pub const DOCUMENTS: &str = "documents";
     pub const DEFINITIONS: &str = "$defs";
     pub const ENTROPY: &str = "entropy";
+    pub const ENCRYPTION_KEY_REQUIREMENTS: &str = "encryptionKeyReqs";
+    pub const DECRYPTION_KEY_REQUIREMENTS: &str = "decryptionKeyReqs";
 }
