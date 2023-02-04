@@ -11,7 +11,6 @@ use crate::error::identity::IdentityError;
 use crate::error::Error;
 use crate::fee::op::DriveOperation;
 use crate::fee_pools::epochs::Epoch;
-use dpp::data_contract::extra::{DocumentType, DriveContractExt};
 use dpp::identity::contract_bounds::ContractBounds;
 use dpp::identity::{IdentityPublicKey, KeyID};
 use dpp::prelude::DataContract;
@@ -19,6 +18,8 @@ use grovedb::batch::KeyInfoPath;
 use grovedb::{EstimatedLayerInformation, TransactionArg};
 use integer_encoding::VarInt;
 use std::collections::{BTreeMap, HashMap};
+use dpp::data_contract::document_type::DocumentType;
+use dpp::data_contract::DriveContractExt;
 
 pub struct ContractApplyInfo<'a> {
     contract: &'a DataContract,
@@ -36,6 +37,7 @@ impl ContractApplyInfo {
         drive_operations: &mut Vec<DriveOperation>,
     ) -> Result<Self, Error> {
         let contract_id = contract_bounds.identifier().to_buffer();
+        // we are getting with fetch info to add the cost to the drive operations
         let maybe_contract_fetch_info = drive.get_contract_with_fetch_info_and_add_to_operations(
             contract_id,
             Some(epoch),

@@ -21,7 +21,7 @@ class LoggedStateRepositoryDecorator {
    * @param {object} response - response of the state repository call
    */
   log(method, parameters, response) {
-    const logger = this.blockExecutionContext.getConsensusLogger();
+    const logger = this.blockExecutionContext.getContextLogger();
 
     logger.trace({
       stateRepository: {
@@ -112,6 +112,62 @@ class LoggedStateRepositoryDecorator {
   }
 
   /**
+   * Fetch identity balance
+   *
+   * @param {Identifier} identityId
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<number|null>}
+   */
+  async fetchIdentityBalance(identityId, executionContext = undefined) {
+    let response;
+
+    try {
+      response = await this.stateRepository.fetchIdentityBalance(
+        identityId,
+        executionContext,
+      );
+    } finally {
+      this.log(
+        'fetchIdentityBalance',
+        {
+          identityId,
+        },
+        response,
+      );
+    }
+
+    return response;
+  }
+
+  /**
+   * Fetch identity balance with debt
+   *
+   * @param {Identifier} identityId
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<number|null>} - Balance can be negative in case of debt
+   */
+  async fetchIdentityBalanceWithDebt(identityId, executionContext = undefined) {
+    let response;
+
+    try {
+      response = await this.stateRepository.fetchIdentityBalanceWithDebt(
+        identityId,
+        executionContext,
+      );
+    } finally {
+      this.log(
+        'fetchIdentityBalanceWithDebt',
+        {
+          identityId,
+        },
+        response,
+      );
+    }
+
+    return response;
+  }
+
+  /**
    * Add to identity balance
    *
    * @param {Identifier} identityId
@@ -133,6 +189,34 @@ class LoggedStateRepositoryDecorator {
         'addToIdentityBalance',
         {
           identityId,
+          amount,
+        },
+        response,
+      );
+    }
+
+    return response;
+  }
+
+  /**
+   * Add to system credits
+   *
+   * @param {number} amount
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<void>}
+   */
+  async addToSystemCredits(amount, executionContext = undefined) {
+    let response;
+
+    try {
+      response = await this.stateRepository.addToSystemCredits(
+        amount,
+        executionContext,
+      );
+    } finally {
+      this.log(
+        'addToSystemCredits',
+        {
           amount,
         },
         response,
@@ -585,26 +669,6 @@ class LoggedStateRepositoryDecorator {
       );
     } finally {
       this.log('enqueueWithdrawalTransaction', { index, transactionBytes }, response);
-    }
-  }
-
-  /**
-   * Calculates storage fee to epochs distribution amount and leftovers
-   *
-   * @param {number} storageFee
-   * @param {number} startEpochIndex
-   * @returns {Promise<[number, number]>}
-   */
-  async calculateStorageFeeDistributionAmountAndLeftovers(storageFee, startEpochIndex) {
-    let response;
-
-    try {
-      response = await this.stateRepository.calculateStorageFeeDistributionAmountAndLeftovers(
-        storageFee,
-        startEpochIndex,
-      );
-    } finally {
-      this.log('calculateStorageFeeDistributionAmountAndLeftovers', { storageFee, startEpochIndex }, response);
     }
   }
 }

@@ -1,22 +1,14 @@
-use crate::drive::defaults::PROTOCOL_VERSION;
-use crate::drive::grove_operations::DirectQueryType;
 use crate::drive::grove_operations::DirectQueryType::StatefulDirectQuery;
-use crate::drive::grove_operations::QueryTarget::QueryTargetValue;
-use crate::drive::identity::identity_path;
-use crate::drive::identity::IdentityRootStructure::IdentityTreeRevision;
 use crate::drive::{
     non_unique_key_hashes_sub_tree_path, non_unique_key_hashes_tree_path,
     unique_key_hashes_tree_path, unique_key_hashes_tree_path_vec, Drive,
 };
 use crate::error::drive::DriveError;
 use crate::error::Error;
-use crate::error::Error::GroveDB;
 use crate::fee::op::DriveOperation;
-use dpp::identifier::Identifier;
 use dpp::identity::Identity;
 use grovedb::Element::Item;
 use grovedb::{PathQuery, Query, SizedQuery, TransactionArg};
-use integer_encoding::VarInt;
 use std::collections::BTreeMap;
 
 impl Drive {
@@ -57,7 +49,7 @@ impl Drive {
                         "identity id should be 32 bytes".to_string(),
                     ))
                 })
-                .map(|id| Some(id)),
+                .map(Some),
 
             Ok(None) => Ok(None),
 
@@ -72,7 +64,7 @@ impl Drive {
     /// Fetches identity ids with all its information from storage.
     pub fn fetch_identity_ids_by_unique_public_key_hashes(
         &self,
-        public_key_hashes: Vec<[u8; 20]>,
+        public_key_hashes: &[[u8; 20]],
         transaction: TransactionArg,
     ) -> Result<BTreeMap<[u8; 20], Option<[u8; 32]>>, Error> {
         let mut drive_operations: Vec<DriveOperation> = vec![];
@@ -86,7 +78,7 @@ impl Drive {
     /// Given public key hashes, fetches identity ids from storage.
     pub(crate) fn fetch_identity_ids_by_unique_public_key_hashes_operations(
         &self,
-        public_key_hashes: Vec<[u8; 20]>,
+        public_key_hashes: &[[u8; 20]],
         transaction: TransactionArg,
         drive_operations: &mut Vec<DriveOperation>,
     ) -> Result<BTreeMap<[u8; 20], Option<[u8; 32]>>, Error> {
@@ -98,7 +90,12 @@ impl Drive {
                 .map(|key_hash| key_hash.to_vec())
                 .collect(),
         );
-        let path_query = PathQuery::new_unsized(unique_key_hashes, query);
+        let sized_query = SizedQuery {
+            query,
+            limit: Some(public_key_hashes.len() as u16),
+            offset: None,
+        };
+        let path_query = PathQuery::new(unique_key_hashes, sized_query);
         self.grove_get_raw_path_query_with_optional(&path_query, transaction, drive_operations)?
             .into_iter()
             .map(|(_, key, element)| {
@@ -243,12 +240,12 @@ impl Drive {
     /// Fetches identities with all its information from storage.
     pub fn fetch_full_identities_by_unique_public_key_hashes(
         &self,
-        public_key_hash: Vec<[u8; 20]>,
+        public_key_hashes: &[[u8; 20]],
         transaction: TransactionArg,
     ) -> Result<BTreeMap<[u8; 20], Option<Identity>>, Error> {
         let mut drive_operations: Vec<DriveOperation> = vec![];
         self.fetch_full_identities_by_unique_public_key_hashes_operations(
-            public_key_hash,
+            public_key_hashes,
             transaction,
             &mut drive_operations,
         )
@@ -257,12 +254,12 @@ impl Drive {
     /// Given an identity, fetches the identity with its flags from storage.
     pub(crate) fn fetch_full_identities_by_unique_public_key_hashes_operations(
         &self,
-        public_key_hash: Vec<[u8; 20]>,
+        public_key_hashes: &[[u8; 20]],
         transaction: TransactionArg,
         drive_operations: &mut Vec<DriveOperation>,
     ) -> Result<BTreeMap<[u8; 20], Option<Identity>>, Error> {
         let identity_ids = self.fetch_identity_ids_by_unique_public_key_hashes_operations(
-            public_key_hash,
+            public_key_hashes,
             transaction,
             drive_operations,
         )?;
@@ -277,80 +274,12 @@ impl Drive {
             })
             .collect::<Result<BTreeMap<[u8; 20], Option<Identity>>, Error>>()
     }
-
-    /// The query for the identity revision
-    pub fn identity_id_by_public_key_hash_query(public_key_hash: [u8; 20]) -> PathQuery {
-        let unique_key_hashes = unique_key_hashes_tree_path_vec();
-        let mut query = Query::new();
-        query.insert_key(public_key_hash.to_vec());
-        PathQuery {
-            path: unique_key_hashes,
-            query: SizedQuery {
-                query,
-                limit: Some(1),
-                offset: None,
-            },
-        }
-    }
-
-    /// This query gets the full identity and the public key hash
-    pub fn full_identity_with_public_key_hash_query(
-        public_key_hash: [u8; 20],
-        identity_id: [u8; 32],
-    ) -> Result<PathQuery, Error> {
-        let full_identity_query = Self::full_identity_query(identity_id)?;
-        let identity_id_by_public_key_hash_query =
-            Self::identity_id_by_public_key_hash_query(public_key_hash);
-        PathQuery::merge(vec![
-            &full_identity_query,
-            &identity_id_by_public_key_hash_query,
-        ])
-        .map_err(Error::GroveDB)
-    }
-
-    /// Fetches an identity with all its information from storage.
-    pub fn fetch_proved_full_identity_by_unique_public_key_hash(
-        &self,
-        public_key_hash: [u8; 20],
-        transaction: TransactionArg,
-    ) -> Result<Vec<u8>, Error> {
-        let mut drive_operations: Vec<DriveOperation> = vec![];
-        self.fetch_proved_full_identity_by_unique_public_key_hash_operations(
-            public_key_hash,
-            transaction,
-            &mut drive_operations,
-        )
-    }
-
-    /// Given an identity, fetches the identity with its flags from storage.
-    pub(crate) fn fetch_proved_full_identity_by_unique_public_key_hash_operations(
-        &self,
-        public_key_hash: [u8; 20],
-        transaction: TransactionArg,
-        drive_operations: &mut Vec<DriveOperation>,
-    ) -> Result<Vec<u8>, Error> {
-        let identity_id = self.fetch_identity_id_by_unique_public_key_hash_operations(
-            public_key_hash,
-            transaction,
-            drive_operations,
-        )?;
-        if let Some(identity_id) = identity_id {
-            let query =
-                Self::full_identity_with_public_key_hash_query(public_key_hash, identity_id)?;
-            self.grove_get_proved_path_query(&query, transaction, drive_operations)
-        } else {
-            // We only prove the absence of the public key hash
-            let query = Self::identity_id_by_public_key_hash_query(public_key_hash);
-            self.grove_get_proved_path_query(&query, transaction, drive_operations)
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::common::helpers::setup::setup_drive;
     use crate::drive::block_info::BlockInfo;
-    use dpp::identity::Identity;
 
     use super::*;
 

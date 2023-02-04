@@ -1,5 +1,4 @@
 const PreCalculatedOperation = require('@dashevo/dpp/lib/stateTransition/fee/operations/PreCalculatedOperation');
-const Identity = require('@dashevo/dpp/lib/identity/Identity');
 const StorageResult = require('../storage/StorageResult');
 
 class IdentityPublicKeyStoreRepository {
@@ -11,20 +10,6 @@ class IdentityPublicKeyStoreRepository {
   constructor(groveDBStore, decodeProtocolEntity) {
     this.storage = groveDBStore;
     this.decodeProtocolEntity = decodeProtocolEntity;
-  }
-
-  /**
-   * Fetch deserialized identities by public key hash
-   *
-   * @param {Buffer} publicKeyHash
-   * @param {Object} [options]
-   * @param {boolean} [options.useTransaction=false]
-   * @param {boolean} [options.dryRun=false]
-   *
-   * @return {Promise<StorageResult<Identity[]>>}
-   */
-  async fetch(publicKeyHash, options = {}) {
-    throw new Error('not implemented');
   }
 
   /**
@@ -49,7 +34,7 @@ class IdentityPublicKeyStoreRepository {
       const feeResult = await this.storage.getDrive().addKeysToIdentity(
         identityId,
         keys,
-        blockInfo,
+        blockInfo.toObject(),
         Boolean(options.useTransaction),
         Boolean(options.dryRun),
       );
@@ -96,7 +81,7 @@ class IdentityPublicKeyStoreRepository {
         identityId,
         keyIds,
         disabledAt,
-        blockInfo,
+        blockInfo.toObject(),
         Boolean(options.useTransaction),
         Boolean(options.dryRun),
       );
@@ -116,47 +101,6 @@ class IdentityPublicKeyStoreRepository {
         }, 'disable');
       }
     }
-  }
-
-  /**
-   * Fetch deserialized identities by multiple public key hashes
-   *
-   * @param {Buffer[]} publicKeyHashes
-   * @param {Object} [options]
-   * @param {boolean} [options.useTransaction=false]
-   * @param {boolean} [options.dryRun=false]
-   *
-   * @return {Promise<StorageResult<Identity[]>>}
-   */
-  async fetchMany(publicKeyHashes, options = {}) {
-    throw new Error('not implemented');
-  }
-
-  /**
-   * Fetch serialized identities by multiple public key hashes
-   *
-   * @param {Buffer[]} publicKeyHashes
-   * @param {Object} [options]
-   * @param {boolean} [options.useTransaction=false]
-   * @param {boolean} [options.dryRun=false]
-   *
-   * @return {Promise<StorageResult<Buffer[]>>}
-   */
-  async fetchManyBuffers(publicKeyHashes, options = {}) {
-    throw new Error('not implemented');
-  }
-
-  /**
- * Prove identities by multiple public key hashes
- *
- * @param {Buffer[]} publicKeyHashes
- * @param {Object} [options]
- * @param {boolean} [options.useTransaction=false]
- *
- * @return {Promise<StorageResult<Buffer>>}
- */
-  async proveMany(publicKeyHashes, options = {}) {
-    throw new Error('not implemented');
   }
 }
 

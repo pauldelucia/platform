@@ -1,35 +1,34 @@
 const Long = require('long');
 
+const crypto = require('crypto');
+
 const DashPlatformProtocol = require('@dashevo/dpp');
+
+const { FeeResult } = require('@dashevo/rs-drive');
 
 const ValidationResult = require('@dashevo/dpp/lib/validation/ValidationResult');
 
-const getIdentityFixture = require('@dashevo/dpp/lib/test/fixtures/getIdentityFixture');
-
 const createDPPMock = require('@dashevo/dpp/lib/test/mocks/createDPPMock');
-const createStateRepositoryMock = require('@dashevo/dpp/lib/test/mocks/createStateRepositoryMock');
 const getDataContractFixture = require('@dashevo/dpp/lib/test/fixtures/getDataContractFixture');
-const getDocumentFixture = require('@dashevo/dpp/lib/test/fixtures/getDocumentsFixture');
+const getDocumentsFixture = require('@dashevo/dpp/lib/test/fixtures/getDocumentsFixture');
 const GrpcErrorCodes = require('@dashevo/grpc-common/lib/server/error/GrpcErrorCodes');
+
 const StateTransitionExecutionContext = require('@dashevo/dpp/lib/stateTransition/StateTransitionExecutionContext');
 
 const SomeConsensusError = require('@dashevo/dpp/lib/test/mocks/SomeConsensusError');
 
 const BlockExecutionContextMock = require('../../../../../lib/test/mock/BlockExecutionContextMock');
-const deliverTxFactory = require('../../../../../lib/abci/handlers/proposal/deliverTxFactory');
 
+const deliverTxFactory = require('../../../../../lib/abci/handlers/proposal/deliverTxFactory');
 const LoggerMock = require('../../../../../lib/test/mock/LoggerMock');
 const DPPValidationAbciError = require('../../../../../lib/abci/errors/DPPValidationAbciError');
 const InvalidArgumentAbciError = require('../../../../../lib/abci/errors/InvalidArgumentAbciError');
-const PredictedFeeLowerThanActualError = require('../../../../../lib/abci/handlers/errors/PredictedFeeLowerThanActualError');
-const NegativeBalanceError = require('../../../../../lib/abci/handlers/errors/NegativeBalanceError');
-const BlockInfo = require('../../../../../lib/blockExecution/BlockInfo');
+const StorageResult = require('../../../../../lib/storage/StorageResult');
 
 describe('deliverTxFactory', () => {
   let deliverTx;
   let documentTx;
   let dataContractTx;
-  let identity;
   let dppMock;
   let documentsBatchTransitionFixture;
   let dataContractCreateTransitionFixture;
@@ -41,39 +40,56 @@ describe('deliverTxFactory', () => {
   let round;
   let proposalBlockExecutionContextMock;
   let stateTransitionExecutionContextMock;
-  let identityRepositoryMock;
-  let blockInfo;
+  let identityBalanceRepositoryMock;
+  let processingFee;
+  let storageFee;
+  let refundsPerEpoch;
+  let feeRefunds;
+  let createContextLoggerMock;
+  let calculateStateTransitionFeeMock;
+  let calculateStateTransitionFeeFromOperationsMock;
 
   beforeEach(async function beforeEach() {
     round = 42;
     const dataContractFixture = getDataContractFixture();
-    const documentFixture = getDocumentFixture();
-
-    loggerMock = new LoggerMock(this.sinon);
+    const documentFixture = getDocumentsFixture();
 
     dpp = new DashPlatformProtocol();
     await dpp.initialize();
-
-    stateTransitionExecutionContextMock = new StateTransitionExecutionContext();
-
-    stateTransitionExecutionContextMock.setLastCalculatedFeeDetails({
-      storageFee: 100,
-      processingFee: 10,
-      feeRefunds: [{ identifier: Buffer.alloc(32), creditsPerEpoch: { 1: 15 } }],
-      feeRefundsSum: 15,
-      requiredAmount: 85,
-      desiredAmount: 95,
-    });
 
     documentsBatchTransitionFixture = dpp.document.createStateTransition({
       create: documentFixture,
     });
 
-    documentsBatchTransitionFixture.setExecutionContext(stateTransitionExecutionContextMock);
-
     dataContractCreateTransitionFixture = dpp
       .dataContract.createDataContractCreateTransition(dataContractFixture);
 
+    loggerMock = new LoggerMock(this.sinon);
+
+    stateTransitionExecutionContextMock = new StateTransitionExecutionContext();
+
+    processingFee = 10;
+    storageFee = 100;
+    const totalRefunds = 15;
+    refundsPerEpoch = {
+      1: totalRefunds,
+    };
+    feeRefunds = [
+      {
+        identifier: Buffer.alloc(32),
+        creditsPerEpoch: { 1: totalRefunds },
+      },
+    ];
+
+    const actualSTFees = FeeResult.create(storageFee, processingFee, feeRefunds);
+
+    identityBalanceRepositoryMock = {
+      applyFees: this.sinon.stub().resolves(
+        new StorageResult(actualSTFees),
+      ),
+    };
+
+    documentsBatchTransitionFixture.setExecutionContext(stateTransitionExecutionContextMock);
     dataContractCreateTransitionFixture.setExecutionContext(stateTransitionExecutionContextMock);
 
     documentTx = documentsBatchTransitionFixture.toBuffer();
@@ -89,8 +105,6 @@ describe('deliverTxFactory', () => {
       .validateState
       .resolves(validationResult);
 
-    identity = getIdentityFixture();
-
     unserializeStateTransitionMock = this.sinon.stub();
 
     proposalBlockExecutionContextMock = new BlockExecutionContextMock(this.sinon);
@@ -98,8 +112,6 @@ describe('deliverTxFactory', () => {
     proposalBlockExecutionContextMock.getEpochInfo.returns({
       currentEpochIndex: 0,
     });
-
-    blockInfo = BlockInfo.createFromBlockExecutionContext(proposalBlockExecutionContextMock);
 
     executionTimerMock = {
       clearTimer: this.sinon.stub(),
@@ -109,21 +121,39 @@ describe('deliverTxFactory', () => {
       isStarted: this.sinon.stub(),
     };
 
-    identityRepositoryMock = {
-      addToBalance: this.sinon.stub(),
-      removeFromBalance: this.sinon.stub(),
-    };
+    createContextLoggerMock = this.sinon.stub().returns(loggerMock);
+
+    calculateStateTransitionFeeMock = this.sinon.stub().returns({
+      storageFee,
+      processingFee,
+      feeRefunds,
+      totalRefunds,
+      requiredAmount: processingFee - totalRefunds,
+      desiredAmount: storageFee + processingFee - totalRefunds,
+    });
+
+    calculateStateTransitionFeeFromOperationsMock = this.sinon.stub().returns({
+      storageFee,
+      processingFee,
+      feeRefunds,
+      totalRefunds,
+      requiredAmount: processingFee - totalRefunds,
+      desiredAmount: storageFee + processingFee - totalRefunds,
+    });
 
     deliverTx = deliverTxFactory(
       unserializeStateTransitionMock,
       dppMock,
       proposalBlockExecutionContextMock,
       executionTimerMock,
-      identityRepositoryMock,
+      identityBalanceRepositoryMock,
+      calculateStateTransitionFeeMock,
+      calculateStateTransitionFeeFromOperationsMock,
+      createContextLoggerMock,
     );
   });
 
-  it('should execute a DocumentsBatchTransition', async () => {
+  it('should execute a state transition and return result', async () => {
     unserializeStateTransitionMock.resolves(documentsBatchTransitionFixture);
 
     const response = await deliverTx(documentTx, round, loggerMock);
@@ -131,12 +161,9 @@ describe('deliverTxFactory', () => {
     expect(response).to.deep.equal({
       code: 0,
       fees: {
-        processingFee: 10,
-        storageFee: 100,
-        feeRefunds: {
-          1: 15,
-        },
-        feeRefundsSum: 15,
+        processingFee,
+        storageFee,
+        refundsPerEpoch,
       },
     });
 
@@ -156,21 +183,41 @@ describe('deliverTxFactory', () => {
       documentsBatchTransitionFixture,
     );
 
-    expect(identityRepositoryMock.removeFromBalance).to.be.calledOnceWithExactly(
-      documentsBatchTransitionFixture.getOwnerId(),
-      85,
-      95,
-      blockInfo,
-      { useTransaction: true },
-    );
+    expect(identityBalanceRepositoryMock.applyFees).to.be.calledOnce();
 
-    expect(identityRepositoryMock.addToBalance).to.not.be.called();
+    const applyFeesToBalanceArgs = identityBalanceRepositoryMock.applyFees.getCall(0).args;
+
+    expect(applyFeesToBalanceArgs).to.have.lengthOf(3);
+
+    const identifier = applyFeesToBalanceArgs[0];
+
+    expect(identifier).to.equals(documentsBatchTransitionFixture.getOwnerId());
+
+    const feeResult = applyFeesToBalanceArgs[1];
+
+    expect(feeResult).to.be.an.instanceOf(FeeResult);
+
+    expect(feeResult.storageFee).to.equals(storageFee);
+    expect(feeResult.processingFee).to.equals(processingFee);
+    expect(feeResult.feeRefunds).to.deep.equals(feeRefunds);
+
+    expect(applyFeesToBalanceArgs[2]).to.deep.equals({ useTransaction: true });
 
     expect(proposalBlockExecutionContextMock.addDataContract).to.not.be.called();
 
     expect(
       dataContractCreateTransitionFixture.getExecutionContext().dryOperations,
     ).to.have.length(0);
+
+    const stHash = crypto
+      .createHash('sha256')
+      .update(documentTx)
+      .digest()
+      .toString('hex')
+      .toUpperCase();
+    expect(createContextLoggerMock).to.be.calledOnceWithExactly(loggerMock, {
+      txId: stHash,
+    });
   });
 
   it('should execute a DataContractCreateTransition', async () => {
@@ -181,12 +228,9 @@ describe('deliverTxFactory', () => {
     expect(response).to.deep.equal({
       code: 0,
       fees: {
-        processingFee: 10,
-        storageFee: 100,
-        feeRefunds: {
-          1: 15,
-        },
-        feeRefundsSum: 15,
+        processingFee,
+        storageFee,
+        refundsPerEpoch,
       },
     });
 
@@ -206,76 +250,25 @@ describe('deliverTxFactory', () => {
       dataContractCreateTransitionFixture,
     );
 
-    expect(identityRepositoryMock.removeFromBalance).to.be.calledOnceWithExactly(
-      dataContractCreateTransitionFixture.getOwnerId(),
-      85,
-      95,
-      blockInfo,
-      { useTransaction: true },
-    );
+    expect(identityBalanceRepositoryMock.applyFees).to.be.calledOnce();
 
-    expect(identityRepositoryMock.addToBalance).to.not.be.called();
+    const applyFeesToBalanceArgs = identityBalanceRepositoryMock.applyFees.getCall(0).args;
 
-    expect(
-      dataContractCreateTransitionFixture.getExecutionContext().dryOperations,
-    ).to.have.length(0);
+    expect(applyFeesToBalanceArgs).to.have.lengthOf(3);
 
-    expect(proposalBlockExecutionContextMock.addDataContract).to.be.calledOnceWith(
-      dataContractCreateTransitionFixture.getDataContract(),
-    );
-  });
+    const identifier = applyFeesToBalanceArgs[0];
 
-  it('should add to balance if refunds are higher than storage and processing fees', async () => {
-    unserializeStateTransitionMock.resolves(dataContractCreateTransitionFixture);
+    expect(identifier).to.equals(dataContractCreateTransitionFixture.getOwnerId());
 
-    stateTransitionExecutionContextMock.setLastCalculatedFeeDetails({
-      storageFee: 10,
-      processingFee: 10,
-      feeRefunds: [{ identifier: Buffer.alloc(32), creditsPerEpoch: { 1: 15, 2: 10 } }],
-      feeRefundsSum: 25,
-      requiredAmount: -15,
-      desiredAmount: -5,
-    });
+    const feeResult = applyFeesToBalanceArgs[1];
 
-    const response = await deliverTx(dataContractTx, round, loggerMock);
+    expect(feeResult).to.be.an.instanceOf(FeeResult);
 
-    expect(response).to.deep.equal({
-      code: 0,
-      fees: {
-        processingFee: 10,
-        storageFee: 10,
-        feeRefunds: {
-          1: 15,
-          2: 10,
-        },
-        feeRefundsSum: 25,
-      },
-    });
+    expect(feeResult.storageFee).to.equals(storageFee);
+    expect(feeResult.processingFee).to.equals(processingFee);
+    expect(feeResult.feeRefunds).to.deep.equals(feeRefunds);
 
-    expect(unserializeStateTransitionMock).to.be.calledOnceWithExactly(
-      dataContractCreateTransitionFixture.toBuffer(),
-      {
-        logger: loggerMock,
-        executionTimer: executionTimerMock,
-      },
-    );
-
-    expect(dppMock.stateTransition.validateState).to.be.calledOnceWithExactly(
-      dataContractCreateTransitionFixture,
-    );
-
-    expect(dppMock.stateTransition.apply).to.be.calledOnceWithExactly(
-      dataContractCreateTransitionFixture,
-    );
-
-    expect(identityRepositoryMock.addToBalance).to.be.calledOnceWithExactly(
-      dataContractCreateTransitionFixture.getOwnerId(),
-      5,
-      blockInfo,
-      { useTransaction: true },
-    );
-
-    expect(identityRepositoryMock.removeFromBalance).to.not.be.called();
+    expect(applyFeesToBalanceArgs[2]).to.deep.equals({ useTransaction: true });
 
     expect(
       dataContractCreateTransitionFixture.getExecutionContext().dryOperations,
@@ -321,42 +314,6 @@ describe('deliverTxFactory', () => {
       expect(e.getMessage()).to.equal(errorMessage);
       expect(e.getCode()).to.equal(GrpcErrorCodes.INVALID_ARGUMENT);
       expect(dppMock.stateTransition.validate).to.not.be.called();
-    }
-  });
-
-  // TODO: enable once fee calculation is done
-  it.skip('should throw PredictedFeeLowerThanActualError if actual fee > predicted fee', async function it() {
-    dataContractCreateTransitionFixture.calculateFee = this.sinon.stub().returns(0);
-
-    dataContractCreateTransitionFixture.calculateFee.onCall(1).returns(10);
-
-    unserializeStateTransitionMock.resolves(dataContractCreateTransitionFixture);
-
-    try {
-      await deliverTx(documentTx, round, loggerMock);
-
-      expect.fail('should throw InvalidArgumentAbciError error');
-    } catch (e) {
-      expect(e).to.be.instanceOf(PredictedFeeLowerThanActualError);
-      expect(e.getStateTransition().toBuffer())
-        .to.deep.equal(dataContractCreateTransitionFixture.toBuffer());
-    }
-  });
-
-  // TODO: enable once fee calculation is done
-  it.skip('should throw NegativeBalanceError if balance < fee', async function it() {
-    dataContractCreateTransitionFixture.calculateFee = this.sinon.stub().returns(0);
-
-    dataContractCreateTransitionFixture.calculateFee.returns(100);
-
-    unserializeStateTransitionMock.resolves(dataContractCreateTransitionFixture);
-
-    try {
-      await deliverTx(documentTx, round, loggerMock);
-
-      expect.fail('should throw InvalidArgumentAbciError error');
-    } catch (e) {
-      expect(e).to.be.instanceOf(NegativeBalanceError);
     }
   });
 });

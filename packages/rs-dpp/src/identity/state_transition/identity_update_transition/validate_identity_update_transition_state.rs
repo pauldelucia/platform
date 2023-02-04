@@ -1,12 +1,13 @@
-use dashcore::BlockHeader;
+use anyhow::anyhow;
+use dashcore::{consensus, BlockHeader};
 use serde_json::Value;
+use std::convert::TryInto;
 use std::sync::Arc;
 
 use crate::{
     block_time_window::validate_time_in_block_time_window::validate_time_in_block_time_window,
     consensus::basic::BasicError,
     identity::validation::{RequiredPurposeAndSecurityLevelValidator, TPublicKeysValidator},
-    prelude::Identity,
     state_repository::StateRepositoryLike,
     state_transition::StateTransitionLike,
     validation::SimpleValidationResult,
@@ -38,13 +39,16 @@ where
     ) -> Result<SimpleValidationResult, NonConsensusError> {
         let mut validation_result = SimpleValidationResult::default();
 
-        let maybe_stored_identity: Option<Identity> = self
+        let maybe_stored_identity = self
             .state_repository
             .fetch_identity(
                 state_transition.get_identity_id(),
                 state_transition.get_execution_context(),
             )
-            .await
+            .await?
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(Into::into)
             .map_err(|e| NonConsensusError::StateRepositoryFetchError(e.to_string()))?;
 
         if state_transition.get_execution_context().is_dry_run() {
@@ -111,11 +115,14 @@ where
                 }
             }
 
-            let block_header: BlockHeader = self
+            let block_header_bytes = self
                 .state_repository
                 .fetch_latest_platform_block_header()
                 .await
                 .map_err(|e| NonConsensusError::StateRepositoryFetchError(e.to_string()))?;
+
+            let block_header: BlockHeader = consensus::deserialize(&block_header_bytes)
+                .map_err(|e| NonConsensusError::from(anyhow!(e.to_string())))?;
 
             let last_block_header_time = block_header.time as u64 * 1000;
             let disabled_at_time = state_transition.get_public_keys_disabled_at().ok_or(
@@ -141,7 +148,7 @@ where
         identity.add_public_keys(
             state_transition
                 .get_public_keys_to_add()
-                .into_iter()
+                .iter()
                 .cloned()
                 .map(|k| k.to_identity_public_key()),
         );

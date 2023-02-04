@@ -1,16 +1,12 @@
-use crate::drive::block_info::BlockInfo;
-use crate::drive::defaults::PROTOCOL_VERSION;
 use crate::drive::identity::key::fetch::{IdentityKeysRequest, KeyIDIdentityPublicKeyPairBTreeMap};
 use crate::drive::Drive;
 use crate::error::Error;
-use crate::fee::credits::Credits;
 use crate::fee::default_costs::KnownCostItem::FetchIdentityBalanceProcessingCost;
-use crate::fee::epoch::EpochIndex;
 use crate::fee::op::DriveOperation;
 use crate::fee::result::FeeResult;
 use crate::fee_pools::epochs::Epoch;
 use dpp::identifier::Identifier;
-use dpp::identity::{Identity, PartialIdentityInfo};
+use dpp::identity::PartialIdentityInfo;
 use grovedb::TransactionArg;
 
 impl Drive {
@@ -76,8 +72,7 @@ impl Drive {
         transaction: TransactionArg,
     ) -> Result<Option<PartialIdentityInfo>, Error> {
         let id = Identifier::new(identity_key_request.identity_id);
-        let balance =
-            self.fetch_identity_balance(identity_key_request.identity_id, true, transaction)?;
+        let balance = self.fetch_identity_balance(identity_key_request.identity_id, transaction)?;
         let Some(balance) = balance else {
             return Ok(None);
         };
@@ -113,8 +108,7 @@ impl Drive {
         }
         // let's start by getting the balance
         let id = Identifier::new(identity_key_request.identity_id);
-        let balance =
-            self.fetch_identity_balance(identity_key_request.identity_id, apply, transaction)?;
+        let balance = self.fetch_identity_balance(identity_key_request.identity_id, transaction)?;
         let Some(balance) = balance else {
             return Ok((None, FeeResult::new_from_processing_fee(balance_cost)));
         };

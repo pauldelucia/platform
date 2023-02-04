@@ -1,22 +1,19 @@
 use crate::identity::{
-    contract_bounds, IdentityPublicKey, KeyID, KeyType, Purpose, SecurityLevel, BINARY_DATA_FIELDS,
+    contract_bounds, IdentityPublicKey, KeyID, KeyType, Purpose, SecurityLevel,
 };
 use ciborium::value::Value as CborValue;
 use std::convert::TryInto;
 
-use anyhow::anyhow;
-use dashcore::PublicKey as ECDSAPublicKey;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
-use crate::errors::{InvalidVectorSizeError, ProtocolError};
+use crate::errors::ProtocolError;
 use crate::identity::contract_bounds::{ContractBounds, ContractBoundsType};
-use crate::util::cbor_value::{get_key_from_cbor_map, CborCanonicalMap, CborMapExtension};
-use crate::util::hash::ripemd160_sha256;
+use crate::util::cbor_value::{CborCanonicalMap, CborMapExtension, get_key_from_cbor_map};
 use crate::util::json_value::{JsonValueExt, ReplaceWith};
-use crate::util::vec;
 use crate::SerdeParsingError;
-use bincode::{deserialize, serialize};
+
+pub const BINARY_DATA_FIELDS: [&str; 2] = ["data", "signature"];
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -29,13 +26,11 @@ pub struct IdentityPublicKeyInCreation {
     pub key_type: KeyType,
     pub data: Vec<u8>,
     pub read_only: bool,
+    /// The signature is needed for ECDSA_SECP256K1 Key type and BLS12_381 Key type
     pub signature: Vec<u8>,
 }
 
 impl IdentityPublicKeyInCreation {
-    pub fn verify_signature(&self) -> bool {
-        true
-    }
     pub fn to_identity_public_key(self) -> IdentityPublicKey {
         let IdentityPublicKeyInCreation {
             id,
@@ -72,16 +67,26 @@ impl IdentityPublicKeyInCreation {
     }
 
     /// Return raw data, with all binary fields represented as arrays
-    pub fn to_raw_json_object(
-        &self,
-        skip_signatures: bool,
-    ) -> Result<JsonValue, SerdeParsingError> {
+    pub fn to_raw_json_object(&self, skip_signature: bool) -> Result<JsonValue, SerdeParsingError> {
         let mut value = serde_json::to_value(&self)?;
-        if skip_signatures {
-            let _ = value.remove("signature");
+
+        if skip_signature {
+            if let JsonValue::Object(ref mut o) = value {
+                o.remove("signature");
+            }
         }
 
         Ok(value)
+    }
+
+    /// Checks if public key security level is MASTER
+    pub fn is_master(&self) -> bool {
+        self.security_level == SecurityLevel::MASTER
+    }
+
+    /// Get the original public key hash
+    pub fn hash(&self) -> Result<Vec<u8>, ProtocolError> {
+        Into::<IdentityPublicKey>::into(self).hash()
     }
 
     /// Return json with all binary data converted to base64
@@ -151,7 +156,7 @@ impl IdentityPublicKeyInCreation {
     }
 }
 
-impl std::convert::Into<IdentityPublicKey> for &IdentityPublicKeyInCreation {
+impl Into<IdentityPublicKey> for &IdentityPublicKeyInCreation {
     fn into(self) -> IdentityPublicKey {
         IdentityPublicKey {
             id: self.id,

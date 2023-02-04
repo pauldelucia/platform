@@ -33,6 +33,7 @@ use grovedb::{Element, EstimatedLayerInformation, TransactionArg};
 use integer_encoding::VarInt;
 use serde::Serialize;
 use std::collections::HashMap;
+use crate::fee_pools::epochs::Epoch;
 
 pub enum ContractApplyInfo {
     Keys(Vec<IdentityPublicKey>),
@@ -179,6 +180,7 @@ impl Drive {
         identity_id: [u8; 32],
         identity_key: IdentityPublicKey,
         with_references: bool,
+        epoch: &Epoch,
         estimated_costs_only_with_layer_info: &mut Option<
             HashMap<KeyInfoPath, EstimatedLayerInformation>,
         >,
@@ -206,10 +208,11 @@ impl Drive {
         self.add_potential_contract_info_for_contract_bounded_key(
             identity_id,
             &identity_key,
+            epoch,
             estimated_costs_only_with_layer_info,
             transaction,
             drive_operations,
-        );
+        )?;
 
         // if we set that we wanted to add references we should construct those
         if with_references {
@@ -234,6 +237,7 @@ impl Drive {
         &self,
         identity_id: [u8; 32],
         keys: Vec<IdentityPublicKey>,
+        epoch: &Epoch,
         estimated_costs_only_with_layer_info: &mut Option<
             HashMap<KeyInfoPath, EstimatedLayerInformation>,
         >,
@@ -273,6 +277,7 @@ impl Drive {
                 identity_id,
                 key,
                 true,
+                epoch,
                 estimated_costs_only_with_layer_info,
                 transaction,
                 &mut batch_operations,

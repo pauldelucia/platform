@@ -21,12 +21,18 @@ const {
   driveProveDocumentsQuery,
   driveInsertIdentity,
   driveFetchIdentity,
+  driveFetchIdentityBalance,
+  driveFetchIdentityBalanceWithCosts,
+  driveFetchIdentityBalanceIncludeDebtWithCosts,
+  driveFetchProvedIdentity,
+  driveFetchManyProvedIdentities,
   driveFetchIdentityWithCosts,
   driveAddToIdentityBalance,
   driveAddKeysToIdentity,
   driveDisableIdentityKeys,
   driveUpdateIdentityRevision,
   driveRemoveFromIdentityBalance,
+  driveApplyFeesToIdentityBalance,
   driveFetchLatestWithdrawalTransactionIndex,
   driveEnqueueWithdrawalTransaction,
   abciInitChain,
@@ -34,6 +40,9 @@ const {
   abciBlockEnd,
   abciAfterFinalizeBlock,
   calculateStorageFeeDistributionAmountAndLeftovers,
+  driveFetchIdentitiesByPublicKeyHashes,
+  driveProveIdentitiesByPublicKeyHashes,
+  driveAddToSystemCredits,
 } = require('neon-load-or-build')({
   dir: __dirname,
 });
@@ -66,13 +75,35 @@ const driveEnqueueWithdrawalTransactionAsync = appendStackAsync(
 );
 const driveInsertIdentityAsync = appendStackAsync(promisify(driveInsertIdentity));
 const driveFetchIdentityAsync = appendStackAsync(promisify(driveFetchIdentity));
+const driveFetchProvedIdentityAsync = appendStackAsync(promisify(driveFetchProvedIdentity));
+const driveFetchIdentityBalanceAsync = appendStackAsync(promisify(driveFetchIdentityBalance));
+const driveFetchIdentityBalanceWithCostsAsync = appendStackAsync(
+  promisify(driveFetchIdentityBalanceWithCosts),
+);
+const driveFetchIdentityBalanceIncludeDebtWithCostsAsync = appendStackAsync(
+  promisify(driveFetchIdentityBalanceIncludeDebtWithCosts),
+);
+
+const driveFetchManyProvedIdentitiesAsync = appendStackAsync(
+  promisify(driveFetchManyProvedIdentities),
+);
 const driveFetchIdentityWithCostsAsync = appendStackAsync(promisify(driveFetchIdentityWithCosts));
 const driveAddToIdentityBalanceAsync = appendStackAsync(promisify(driveAddToIdentityBalance));
+const driveAddToSystemCreditsAsync = appendStackAsync(promisify(driveAddToSystemCredits));
+const driveFetchIdentitiesByPublicKeyHashesAsync = appendStackAsync(
+  promisify(driveFetchIdentitiesByPublicKeyHashes),
+);
+const driveProveIdentitiesByPublicKeyHashesAsync = appendStackAsync(
+  promisify(driveProveIdentitiesByPublicKeyHashes),
+);
 const driveAddKeysToIdentityAsync = appendStackAsync(promisify(driveAddKeysToIdentity));
 const driveDisableIdentityKeysAsync = appendStackAsync(promisify(driveDisableIdentityKeys));
 const driveUpdateIdentityRevisionAsync = appendStackAsync(promisify(driveUpdateIdentityRevision));
 const driveRemoveFromIdentityBalanceAsync = appendStackAsync(
   promisify(driveRemoveFromIdentityBalance),
+);
+const driveApplyFeesToIdentityBalanceAsync = appendStackAsync(
+  promisify(driveApplyFeesToIdentityBalance),
 );
 const abciInitChainAsync = appendStackAsync(promisify(abciInitChain));
 const abciBlockBeginAsync = appendStackAsync(promisify(abciBlockBegin));
@@ -383,6 +414,89 @@ class Drive {
 
   /**
    * @param {Buffer|Identifier} id
+   * @param {boolean} [useTransaction=false]
+   *
+   * @returns {Promise<number|null>}
+   */
+  async fetchIdentityBalance(id, useTransaction = false) {
+    return driveFetchIdentityBalanceAsync.call(
+      this.drive,
+      Buffer.from(id),
+      useTransaction,
+    );
+  }
+
+  /**
+   * @param {Buffer|Identifier} id
+   * @param {RawBlockInfo} blockInfo
+   * @param {boolean} [useTransaction=false]
+   * @param {boolean} [dryRun=false]
+   *
+   * @returns {Promise<[number, FeeResult]>}
+   */
+  async fetchIdentityBalanceWithCosts(id, blockInfo, useTransaction = false, dryRun = false) {
+    return driveFetchIdentityBalanceWithCostsAsync.call(
+      this.drive,
+      Buffer.from(id),
+      blockInfo,
+      !dryRun,
+      useTransaction,
+    ).then(([balance, innerFeeResult]) => [balance, new FeeResult(innerFeeResult)]);
+  }
+
+  /**
+   * @param {Buffer|Identifier} id
+   * @param {RawBlockInfo} blockInfo
+   * @param {boolean} [useTransaction=false]
+   * @param {boolean} [dryRun=false]
+   *
+   * @returns {Promise<[number|null, FeeResult]>}
+   */
+  async fetchIdentityBalanceIncludeDebtWithCosts(
+    id,
+    blockInfo,
+    useTransaction = false,
+    dryRun = false,
+  ) {
+    return driveFetchIdentityBalanceIncludeDebtWithCostsAsync.call(
+      this.drive,
+      Buffer.from(id),
+      blockInfo,
+      !dryRun,
+      useTransaction,
+    ).then(([balance, innerFeeResult]) => [balance, new FeeResult(innerFeeResult)]);
+  }
+
+  /**
+   * @param {Identifier} id
+   * @param {boolean} [useTransaction=false]
+   *
+   * @returns {Promise<Buffer|null>}
+   */
+  async proveIdentity(id, useTransaction = false) {
+    return driveFetchProvedIdentityAsync.call(
+      this.drive,
+      Buffer.from(id),
+      useTransaction,
+    );
+  }
+
+  /**
+   * @param {Identifier[]} ids
+   * @param {boolean} [useTransaction=false]
+   *
+   * @returns {Promise<Buffer|null>}
+   */
+  async proveManyIdentities(ids, useTransaction = false) {
+    return driveFetchManyProvedIdentitiesAsync.call(
+      this.drive,
+      ids.map((id) => Buffer.from(id)),
+      useTransaction,
+    );
+  }
+
+  /**
+   * @param {Buffer|Identifier} id
    * @param {number} epochIndex
    * @param {boolean} [useTransaction=false]
    *
@@ -461,6 +575,81 @@ class Drive {
       !dryRun,
       useTransaction,
     ).then((innerFeeResult) => new FeeResult(innerFeeResult));
+  }
+
+  /**
+   * @param {Identifier} identityId
+   * @param {FeeResult} fees
+   * @param {boolean} [useTransaction=false]
+   *
+   * @returns {Promise<FeeResult>}
+   */
+  async applyFeesToIdentityBalance(
+    identityId,
+    fees,
+    useTransaction = false,
+  ) {
+    return driveApplyFeesToIdentityBalanceAsync.call(
+      this.drive,
+      identityId.toBuffer(),
+      fees.inner,
+      useTransaction,
+    ).then((innerFeeResult) => new FeeResult(innerFeeResult));
+  }
+
+  /**
+   * @param {number} amount
+   * @param {boolean} [useTransaction=false]
+   *
+   * @returns {Promise<void>}
+   */
+  async addToSystemCredits(
+    amount,
+    useTransaction = false,
+  ) {
+    return driveAddToSystemCreditsAsync.call(
+      this.drive,
+      amount,
+      useTransaction,
+    );
+  }
+
+  /**
+   * @param {Buffer[]} hashes
+   * @param {boolean} [useTransaction=false]
+   *
+   * @returns {Promise<Array<Identity|null>>}
+   */
+  async fetchIdentitiesByPublicKeyHashes(hashes, useTransaction = false) {
+    return driveFetchIdentitiesByPublicKeyHashesAsync.call(
+      this.drive,
+      hashes.map((h) => Buffer.from(h)),
+      useTransaction,
+    ).then((encodedIdentities) => (
+      encodedIdentities.map((encodedIdentity) => {
+        const [protocolVersion, rawIdentity] = decodeProtocolEntity(
+          encodedIdentity,
+        );
+
+        rawIdentity.protocolVersion = protocolVersion;
+
+        return new Identity(rawIdentity);
+      })
+    ));
+  }
+
+  /**
+   * @param {Buffer[]} hashes
+   * @param {boolean} [useTransaction=false]
+   *
+   * @returns {Promise<Array<Identity|null>>}
+   */
+  async proveIdentitiesByPublicKeyHashes(hashes, useTransaction = false) {
+    return driveProveIdentitiesByPublicKeyHashesAsync.call(
+      this.drive,
+      hashes.map((h) => Buffer.from(h)),
+      useTransaction,
+    );
   }
 
   /**
@@ -678,6 +867,7 @@ class Drive {
 
 // eslint-disable-next-line max-len
 Drive.calculateStorageFeeDistributionAmountAndLeftovers = calculateStorageFeeDistributionAmountAndLeftoversWithStack;
+Drive.FeeResult = FeeResult;
 
 /**
  * @typedef RawBlockInfo
@@ -718,21 +908,21 @@ Drive.calculateStorageFeeDistributionAmountAndLeftovers = calculateStorageFeeDis
 
 /**
  * @typedef BlockEndRequest
- * @property {BlockFeeResult} fees
+ * @property {BlockFees} fees
  */
 
 /**
- * @typedef BlockFeeResult
+ * @typedef BlockFees
  * @property {number} storageFee
  * @property {number} processingFee
- * @property {Object<string, number>} feeRefunds
- * @property {number} feeRefundsSum
+ * @property {Object<string, number>} refundsPerEpoch
  */
 
 /**
  * @typedef BlockEndResponse
  * @property {number} [proposersPaidCount]
  * @property {number} [paidEpochIndex]
+ * @property {number} [refundedEpochsCount]
  */
 
 /**

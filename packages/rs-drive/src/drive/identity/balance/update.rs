@@ -14,7 +14,7 @@ use grovedb::{Element, EstimatedLayerInformation, TransactionArg};
 use std::collections::HashMap;
 
 /// The outcome of paying for a fee
-pub struct FeeRemovalOutcome {
+pub struct ApplyBalanceChangeOutcome {
     /// The actual fee paid by the identity
     pub actual_fee_paid: FeeResult,
 }
@@ -262,7 +262,7 @@ impl Drive {
         &self,
         balance_change: BalanceChangeForIdentity,
         transaction: TransactionArg,
-    ) -> Result<FeeRemovalOutcome, Error> {
+    ) -> Result<ApplyBalanceChangeOutcome, Error> {
         let (batch_operations, actual_fee_paid) =
             self.apply_balance_change_from_fee_to_identity_operations(balance_change, transaction)?;
 
@@ -275,7 +275,7 @@ impl Drive {
             &mut drive_operations,
         )?;
 
-        Ok(FeeRemovalOutcome { actual_fee_paid })
+        Ok(ApplyBalanceChangeOutcome { actual_fee_paid })
     }
 
     /// Applies a balance change based on Fee Result
@@ -510,8 +510,8 @@ mod tests {
             assert_eq!(
                 fee_result,
                 FeeResult {
-                    processing_fee: 562420,
-                    removed_bytes_from_system: 24, // TODO: That's fine?
+                    processing_fee: 530020,
+                    removed_bytes_from_system: 0,
                     ..Default::default()
                 }
             );
@@ -523,7 +523,7 @@ mod tests {
                 .expect("expected to be able to commit a transaction");
 
             let (balance, _fee_cost) = drive
-                .fetch_identity_balance_with_fees(identity.id.to_buffer(), &block_info, true, None)
+                .fetch_identity_balance_with_costs(identity.id.to_buffer(), &block_info, true, None)
                 .expect("expected to get balance");
 
             assert_eq!(balance.unwrap(), old_balance + amount);
@@ -576,15 +576,15 @@ mod tests {
             assert_eq!(
                 fee_result,
                 FeeResult {
-                    storage_fee: 54000,
-                    processing_fee: 1240280,
-                    removed_bytes_from_system: 24, // TODO: That's fine?
+                    storage_fee: 0,
+                    processing_fee: 1201880,
+                    removed_bytes_from_system: 0,
                     ..Default::default()
                 }
             );
 
             let (updated_balance, _fee_cost) = drive
-                .fetch_identity_balance_with_fees(identity.id.to_buffer(), &block_info, true, None)
+                .fetch_identity_balance_with_costs(identity.id.to_buffer(), &block_info, true, None)
                 .expect("expected to get balance");
 
             assert_eq!(
@@ -640,14 +640,14 @@ mod tests {
                 fee_result,
                 FeeResult {
                     storage_fee: 0,
-                    processing_fee: 899950,
+                    processing_fee: 875150,
                     removed_bytes_from_system: 0,
                     ..Default::default()
                 }
             );
 
             let (updated_balance, _fee_cost) = drive
-                .fetch_identity_balance_with_fees(identity.id.to_buffer(), &block_info, true, None)
+                .fetch_identity_balance_with_costs(identity.id.to_buffer(), &block_info, true, None)
                 .expect("expected to get balance");
 
             assert_eq!(updated_balance.expect("balance should present"), 0);
@@ -686,7 +686,7 @@ mod tests {
             assert_eq!(
                 fee_result,
                 FeeResult {
-                    processing_fee: 10175040,
+                    processing_fee: 10175440,
                     ..Default::default()
                 }
             );
@@ -700,7 +700,7 @@ mod tests {
             assert_eq!(app_hash_after, app_hash_before);
 
             let (balance, _fee_cost) = drive
-                .fetch_identity_balance_with_fees(identity.id.to_buffer(), &block, true, None)
+                .fetch_identity_balance_with_costs(identity.id.to_buffer(), &block, true, None)
                 .expect("expected to get balance");
 
             assert!(balance.is_none()); //shouldn't have changed
@@ -741,8 +741,8 @@ mod tests {
             assert_eq!(
                 fee_result,
                 FeeResult {
-                    processing_fee: 562420,
-                    removed_bytes_from_system: 24, // TODO: That's fine?
+                    processing_fee: 530020,
+                    removed_bytes_from_system: 0,
                     ..Default::default()
                 }
             );
@@ -754,7 +754,7 @@ mod tests {
                 .expect("expected to be able to commit a transaction");
 
             let (balance, _fee_cost) = drive
-                .fetch_identity_balance_with_fees(identity.id.to_buffer(), &block, true, None)
+                .fetch_identity_balance_with_costs(identity.id.to_buffer(), &block, true, None)
                 .expect("expected to get balance");
 
             assert_eq!(balance.unwrap(), old_balance - amount);
@@ -791,13 +791,13 @@ mod tests {
             assert_eq!(
                 fee_result,
                 FeeResult {
-                    processing_fee: 5430770,
+                    processing_fee: 5431170,
                     ..Default::default()
                 }
             );
 
             let (balance, _fee_cost) = drive
-                .fetch_identity_balance_with_fees(identity.id.to_buffer(), &block, true, None)
+                .fetch_identity_balance_with_costs(identity.id.to_buffer(), &block, true, None)
                 .expect("expected to get balance");
 
             assert!(balance.is_none()); //shouldn't have changed
@@ -823,8 +823,7 @@ mod tests {
             let fee_result = FeeResult::default_with_fees(0, 0);
             let fee_change = fee_result
                 .clone()
-                .into_balance_change(identity.id.to_buffer())
-                .expect("should calculate fee change for identity");
+                .into_balance_change(identity.id.to_buffer());
 
             let (drive_operations, fee_result_outcome) = drive
                 .apply_balance_change_from_fee_to_identity_operations(fee_change, None)
@@ -862,8 +861,7 @@ mod tests {
             };
             let fee_change = fee_result
                 .clone()
-                .into_balance_change(identity.id.to_buffer())
-                .expect("should calculate fee change for identity");
+                .into_balance_change(identity.id.to_buffer());
 
             let (drive_operations, fee_result_outcome) = drive
                 .apply_balance_change_from_fee_to_identity_operations(fee_change, None)
@@ -898,9 +896,7 @@ mod tests {
             let drive = setup_drive_with_initial_state_structure();
 
             let fee_result = FeeResult::default_with_fees(100000, 100);
-            let fee_change = fee_result
-                .into_balance_change([0; 32])
-                .expect("should calculate fee change for identity");
+            let fee_change = fee_result.into_balance_change([0; 32]);
 
             let result =
                 drive.apply_balance_change_from_fee_to_identity_operations(fee_change, None);
@@ -942,8 +938,7 @@ mod tests {
             };
             let fee_change = fee_result
                 .clone()
-                .into_balance_change(identity.id.to_buffer())
-                .expect("should calculate fee change for identity");
+                .into_balance_change(identity.id.to_buffer());
 
             let (drive_operations, fee_result_outcome) = drive
                 .apply_balance_change_from_fee_to_identity_operations(fee_change, None)
@@ -1004,8 +999,7 @@ mod tests {
             };
             let fee_change = fee_result
                 .clone()
-                .into_balance_change(identity.id.to_buffer())
-                .expect("should calculate fee change for identity");
+                .into_balance_change(identity.id.to_buffer());
 
             let (drive_operations, fee_result_outcome) = drive
                 .apply_balance_change_from_fee_to_identity_operations(fee_change, None)
@@ -1057,8 +1051,7 @@ mod tests {
 
             let fee_change = fee_result
                 .clone()
-                .into_balance_change(identity.id.to_buffer())
-                .expect("should calculate fee change for identity");
+                .into_balance_change(identity.id.to_buffer());
 
             let (drive_operations, fee_result_outcome) = drive
                 .apply_balance_change_from_fee_to_identity_operations(fee_change, None)
@@ -1104,9 +1097,7 @@ mod tests {
                 ..Default::default()
             };
 
-            let fee_change = fee_result
-                .into_balance_change(identity.id.to_buffer())
-                .expect("should calculate fee change for identity");
+            let fee_change = fee_result.into_balance_change(identity.id.to_buffer());
 
             let (drive_operations, fee_result_outcome) = drive
                 .apply_balance_change_from_fee_to_identity_operations(fee_change, None)
@@ -1159,9 +1150,7 @@ mod tests {
                 ..Default::default()
             };
 
-            let fee_change = fee_result
-                .into_balance_change(identity.id.to_buffer())
-                .expect("should calculate fee change for identity");
+            let fee_change = fee_result.into_balance_change(identity.id.to_buffer());
 
             let result =
                 drive.apply_balance_change_from_fee_to_identity_operations(fee_change, None);

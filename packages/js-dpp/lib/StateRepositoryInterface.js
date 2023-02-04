@@ -155,12 +155,45 @@
  */
 
 /**
+ * Fetch identity balance by identity ID
+ *
+ * @async
+ * @method
+ * @name StateRepository#fetchIdentityBalance
+ * @param {Identifier} id
+ * @param {StateTransitionExecutionContext} [executionContext]
+ * @returns {Promise<number|null>}
+ */
+
+/**
+ * Fetch identity balance including debt by identity ID
+ *
+ * @async
+ * @method
+ * @name StateRepository#fetchIdentityBalanceWithDebt
+ * @param {Identifier} id
+ * @param {StateTransitionExecutionContext} [executionContext]
+ * @returns {Promise<number|null>} - Balance can be negative in case of debt present
+ */
+
+/**
  * Add to identity balance
  *
  * @async
  * @method
  * @name StateRepository#addToIdentityBalance
  * @param {Identifier} identityId
+ * @param {number} amount
+ * @param {StateTransitionExecutionContext} [executionContext]
+ * @returns {Promise<void>}
+ */
+
+/**
+ * Add to system credits
+ *
+ * @async
+ * @method
+ * @name StateRepository#addToSystemCredits
  * @param {number} amount
  * @param {StateTransitionExecutionContext} [executionContext]
  * @returns {Promise<void>}
@@ -242,15 +275,4 @@
  * @method
  * @name StateRepository#fetchLatestPlatformBlockTime
  * @returns {Promise<number>}
- */
-
-/**
- * Calculates storage fee to epochs distribution amount and leftovers
- *
- * @async
- * @method
- * @name StateRepository#calculateStorageFeeDistributionAmountAndLeftovers
- * @param {number} storageFee
- * @param {number} startEpochIndex
- * @returns {Promise<[number, number]>}
  */

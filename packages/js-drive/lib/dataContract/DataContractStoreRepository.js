@@ -31,9 +31,9 @@ class DataContractStoreRepository {
     try {
       const feeResult = await this.storage.getDrive().createContract(
         dataContract,
-        blockInfo,
+        blockInfo.toObject(),
         Boolean(options.useTransaction),
-        Boolean(options.dryRun), // TODO rs-drive doesn't support this
+        Boolean(options.dryRun),
       );
 
       return new StorageResult(
@@ -72,9 +72,9 @@ class DataContractStoreRepository {
     try {
       const feeResult = await this.storage.getDrive().updateContract(
         dataContract,
-        blockInfo,
+        blockInfo.toObject(),
         Boolean(options.useTransaction),
-        Boolean(options.dryRun), // TODO rs-drive doesn't support this
+        Boolean(options.dryRun),
       );
 
       return new StorageResult(
@@ -174,7 +174,7 @@ class DataContractStoreRepository {
   }
 }
 
-DataContractStoreRepository.TREE_PATH = [Buffer.from([1])];
+DataContractStoreRepository.TREE_PATH = [Buffer.from([64])];
 DataContractStoreRepository.DATA_CONTRACT_KEY = Buffer.from([0]);
 DataContractStoreRepository.DOCUMENTS_TREE_KEY = Buffer.from([0]);
 

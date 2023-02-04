@@ -48,6 +48,34 @@ class CachedStateRepositoryDecorator {
   }
 
   /**
+   * Fetch identity balance
+   *
+   * @param {Identifier} identityId
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<number|null>}
+   */
+  async fetchIdentityBalance(identityId, executionContext = undefined) {
+    return this.stateRepository.fetchIdentityBalance(
+      identityId,
+      executionContext,
+    );
+  }
+
+  /**
+   * Fetch identity balance with debt
+   *
+   * @param {Identifier} identityId
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<number|null>} - Balance can be negative in case of debt
+   */
+  async fetchIdentityBalanceWithDebt(identityId, executionContext = undefined) {
+    return this.stateRepository.fetchIdentityBalanceWithDebt(
+      identityId,
+      executionContext,
+    );
+  }
+
+  /**
    * Add to identity balance
    *
    * @param {Identifier} identityId
@@ -58,6 +86,20 @@ class CachedStateRepositoryDecorator {
   async addToIdentityBalance(identityId, amount, executionContext = undefined) {
     return this.stateRepository.addToIdentityBalance(
       identityId,
+      amount,
+      executionContext,
+    );
+  }
+
+  /**
+   * Add to system credits
+   *
+   * @param {number} amount
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<void>}
+   */
+  async addToSystemCredits(amount, executionContext = undefined) {
+    return this.stateRepository.addToSystemCredits(
       amount,
       executionContext,
     );
@@ -296,20 +338,6 @@ class CachedStateRepositoryDecorator {
    */
   async fetchLatestPlatformBlockTime() {
     return this.stateRepository.fetchLatestPlatformBlockTime();
-  }
-
-  /**
-   * Calculates storage fee to epochs distribution amount and leftovers
-   *
-   * @param {number} storageFee
-   * @param {number} startEpochIndex
-   * @returns {Promise<[number, number]>}
-   */
-  async calculateStorageFeeDistributionAmountAndLeftovers(storageFee, startEpochIndex) {
-    return this.stateRepository.calculateStorageFeeDistributionAmountAndLeftovers(
-      storageFee,
-      startEpochIndex,
-    );
   }
 }
 

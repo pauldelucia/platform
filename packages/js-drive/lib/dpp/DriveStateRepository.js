@@ -1,5 +1,3 @@
-const { calculateStorageFeeDistributionAmountAndLeftovers } = require('@dashevo/rs-drive');
-
 const { TYPES } = require('@dashevo/dpp/lib/identity/IdentityPublicKey');
 
 const ReadOperation = require('@dashevo/dpp/lib/stateTransition/fee/operations/ReadOperation');
@@ -14,6 +12,7 @@ class DriveStateRepository {
 
   /**
    * @param {IdentityStoreRepository} identityRepository
+   * @param {IdentityBalanceStoreRepository} identityBalanceRepository
    * @param {IdentityPublicKeyStoreRepository} publicKeyToToIdentitiesRepository
    * @param {DataContractStoreRepository} dataContractRepository
    * @param {fetchDocuments} fetchDocuments
@@ -22,12 +21,13 @@ class DriveStateRepository {
    * @param {RpcClient} coreRpcClient
    * @param {BlockExecutionContext} blockExecutionContext
    * @param {SimplifiedMasternodeList} simplifiedMasternodeList
-   * @param {RSDrive} rsDrive
+   * @param {Drive} rsDrive
    * @param {Object} [options]
    * @param {Object} [options.useTransaction=false]
    */
   constructor(
     identityRepository,
+    identityBalanceRepository,
     publicKeyToToIdentitiesRepository,
     dataContractRepository,
     fetchDocuments,
@@ -40,6 +40,7 @@ class DriveStateRepository {
     options = {},
   ) {
     this.identityRepository = identityRepository;
+    this.identityBalanceRepository = identityBalanceRepository;
     this.identityPublicKeyRepository = publicKeyToToIdentitiesRepository;
     this.dataContractRepository = dataContractRepository;
     this.fetchDocumentsFunction = fetchDocuments;
@@ -67,7 +68,7 @@ class DriveStateRepository {
       id,
       {
         blockInfo,
-        ...this.#createRepositoryOptions(executionContext)
+        ...this.#createRepositoryOptions(executionContext),
       },
     );
 
@@ -124,6 +125,54 @@ class DriveStateRepository {
   }
 
   /**
+   * Fetch identity balance
+   *
+   * @param {Identifier} identityId
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<number|null>}
+   */
+  async fetchIdentityBalance(identityId, executionContext = undefined) {
+    const blockInfo = BlockInfo.createFromBlockExecutionContext(this.blockExecutionContext);
+
+    const result = await this.identityBalanceRepository.fetch(
+      identityId,
+      {
+        blockInfo,
+        ...this.#createRepositoryOptions(executionContext),
+      },
+    );
+
+    if (executionContext) {
+      executionContext.addOperation(...result.getOperations());
+    }
+
+    return result.getValue();
+  }
+
+  /**
+   * Fetch identity balance with debt
+   *
+   * @param {Identifier} identityId
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<number|null>} - Balance can be negative in case of debt
+   */
+  async fetchIdentityBalanceWithDebt(identityId, executionContext = undefined) {
+    const blockInfo = BlockInfo.createFromBlockExecutionContext(this.blockExecutionContext);
+
+    const result = await this.identityBalanceRepository.fetchWithDebt(
+      identityId,
+      blockInfo,
+      this.#createRepositoryOptions(executionContext),
+    );
+
+    if (executionContext) {
+      executionContext.addOperation(...result.getOperations());
+    }
+
+    return result.getValue();
+  }
+
+  /**
    * Add to identity balance
    *
    * @param {Identifier} identityId
@@ -134,7 +183,7 @@ class DriveStateRepository {
   async addToIdentityBalance(identityId, amount, executionContext = undefined) {
     const blockInfo = BlockInfo.createFromBlockExecutionContext(this.blockExecutionContext);
 
-    const result = await this.identityRepository.addToBalance(
+    const result = await this.identityBalanceRepository.add(
       identityId,
       amount,
       blockInfo,
@@ -144,6 +193,24 @@ class DriveStateRepository {
     if (executionContext) {
       executionContext.addOperation(...result.getOperations());
     }
+  }
+
+  /**
+   * Add to system credits
+   *
+   * @param {number} amount
+   * @param {StateTransitionExecutionContext} [executionContext]
+   * @returns {Promise<void>}
+   */
+  async addToSystemCredits(amount, executionContext = undefined) {
+    if (executionContext.isDryRun()) {
+      return;
+    }
+
+    await this.rsDrive.addToSystemCredits(
+      amount,
+      this.#options.useTransaction || false,
+    );
   }
 
   /**
@@ -248,14 +315,11 @@ class DriveStateRepository {
     const result = await this.dataContractRepository.fetch(
       id,
       {
-        blockInfo,
+        ...this.#createRepositoryOptions(executionContext),
         // This method doesn't implement dry run because we need a contract
         // to proceed dry run validation and collect further operations
         dryRun: false,
-        // Transaction is not using since Data Contract
-        // should be always committed to use
-        // TODO: We don't need this anymore
-        useTransaction: false,
+        blockInfo,
       },
     );
 
@@ -571,27 +635,6 @@ class DriveStateRepository {
       index,
       transactionBytes,
       this.#options.useTransaction,
-    );
-  }
-
-  /**
-   * Calculates storage fee to epochs distribution amount and leftovers
-   *
-   * @param {number} storageFee
-   * @param {number} startEpochIndex
-   * @returns {Promise<[number, number]>}
-   */
-  async calculateStorageFeeDistributionAmountAndLeftovers(storageFee, startEpochIndex) {
-    const epochInfo = this.blockExecutionContext.getEpochInfo();
-
-    if (!epochInfo) {
-      throw new Error('epoch info is not set');
-    }
-
-    return calculateStorageFeeDistributionAmountAndLeftovers(
-      storageFee,
-      startEpochIndex,
-      epochInfo.currentEpochIndex,
     );
   }
 

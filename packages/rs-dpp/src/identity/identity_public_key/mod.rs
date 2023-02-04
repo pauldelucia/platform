@@ -2,7 +2,7 @@
 
 pub mod contract_bounds;
 pub mod factory;
-mod in_creation;
+pub mod in_creation;
 pub mod key_type;
 pub mod purpose;
 pub mod security_level;
@@ -25,7 +25,6 @@ use crate::util::hash::ripemd160_sha256;
 use crate::util::json_value::{JsonValueExt, ReplaceWith};
 use crate::util::vec;
 use crate::SerdeParsingError;
-use bincode::{deserialize, serialize};
 
 use crate::identity::contract_bounds::ContractBounds;
 pub use in_creation::IdentityPublicKeyInCreation;
@@ -33,7 +32,7 @@ pub use in_creation::IdentityPublicKeyInCreation;
 pub type KeyID = u32;
 pub type TimestampMillis = u64;
 
-pub const BINARY_DATA_FIELDS: [&str; 2] = ["data", "signature"];
+pub const BINARY_DATA_FIELDS: [&str; 1] = ["data"];
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -50,7 +49,7 @@ pub struct IdentityPublicKey {
     pub disabled_at: Option<TimestampMillis>,
 }
 
-impl std::convert::Into<IdentityPublicKeyInCreation> for &IdentityPublicKey {
+impl Into<IdentityPublicKeyInCreation> for &IdentityPublicKey {
     fn into(self) -> IdentityPublicKeyInCreation {
         IdentityPublicKeyInCreation {
             id: self.id,
@@ -66,16 +65,6 @@ impl std::convert::Into<IdentityPublicKeyInCreation> for &IdentityPublicKey {
 }
 
 impl IdentityPublicKey {
-    /// Get raw public key
-    pub fn get_data(&self) -> &[u8] {
-        &self.data
-    }
-
-    /// Set raw public key
-    pub fn set_data(&mut self, data: Vec<u8>) {
-        self.data = data;
-    }
-
     /// Set disabledAt
     pub fn set_disabled_at(&mut self, timestamp_millis: u64) {
         self.disabled_at = Some(timestamp_millis);
@@ -144,7 +133,13 @@ impl IdentityPublicKey {
 
     /// Return raw data, with all binary fields represented as arrays
     pub fn to_raw_json_object(&self) -> Result<JsonValue, SerdeParsingError> {
-        let mut value = serde_json::to_value(&self)?;
+        let mut value = serde_json::to_value(self)?;
+
+        if self.disabled_at.is_none() {
+            if let JsonValue::Object(ref mut o) = value {
+                o.remove("disabledAt");
+            }
+        }
 
         Ok(value)
     }

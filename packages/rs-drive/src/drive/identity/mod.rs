@@ -51,8 +51,6 @@ mod withdrawal_queue;
 
 pub use withdrawal_queue::add_initial_withdrawal_state_structure_operations;
 
-pub(crate) const IDENTITY_KEY: [u8; 1] = [0];
-
 pub(crate) fn identity_path(identity_id: &[u8]) -> [&[u8]; 2] {
     [Into::<&[u8; 1]>::into(RootTree::Identities), identity_id]
 }

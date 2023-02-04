@@ -1,6 +1,5 @@
 use crate::drive::block_info::BlockInfo;
 
-use crate::drive::flags::StorageFlags;
 use crate::drive::identity::{identity_path_vec, IdentityRootStructure};
 use crate::drive::Drive;
 use crate::error::drive::DriveError;
@@ -219,6 +218,7 @@ impl Drive {
             identity_id,
             keys_to_add,
             true,
+            &block_info.epoch,
             &mut estimated_costs_only_with_layer_info,
             transaction,
         )?;
@@ -239,6 +239,7 @@ impl Drive {
         identity_id: [u8; 32],
         keys_to_add: Vec<IdentityPublicKey>,
         with_references: bool,
+        epoch: &Epoch,
         estimated_costs_only_with_layer_info: &mut Option<
             HashMap<KeyInfoPath, EstimatedLayerInformation>,
         >,
@@ -257,6 +258,7 @@ impl Drive {
                 identity_id,
                 key,
                 with_references,
+                epoch,
                 estimated_costs_only_with_layer_info,
                 transaction,
                 &mut drive_operations,
@@ -305,8 +307,8 @@ mod tests {
             assert_eq!(
                 fee_result,
                 FeeResult {
-                    storage_fee: 14175000,
-                    processing_fee: 2459690,
+                    storage_fee: 14148000,
+                    processing_fee: 2432090,
                     ..Default::default()
                 }
             );
@@ -353,8 +355,8 @@ mod tests {
             assert_eq!(
                 fee_result,
                 FeeResult {
-                    storage_fee: 346140000,
-                    processing_fee: 9705000,
+                    storage_fee: 345492000,
+                    processing_fee: 9665800,
                     ..Default::default()
                 }
             );
@@ -466,7 +468,7 @@ mod tests {
                 fee_result,
                 FeeResult {
                     storage_fee: 513000,
-                    processing_fee: 1619260,
+                    processing_fee: 1598060,
                     ..Default::default()
                 }
             );
@@ -606,7 +608,7 @@ mod tests {
                 fee_result,
                 FeeResult {
                     storage_fee: 0,
-                    processing_fee: 768320,
+                    processing_fee: 754320,
                     removed_bytes_from_system: 0,
                     ..Default::default()
                 }

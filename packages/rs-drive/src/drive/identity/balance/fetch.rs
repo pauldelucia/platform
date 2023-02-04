@@ -7,7 +7,7 @@ use crate::drive::Drive;
 use crate::error::drive::DriveError;
 use crate::error::Error;
 use crate::fee::calculate_fee;
-use crate::fee::credits::Credits;
+use crate::fee::credits::{Creditable, Credits, SignedCredits};
 use crate::fee::op::DriveOperation;
 use crate::fee::result::FeeResult;
 use grovedb::Element::{Item, SumItem};
@@ -19,13 +19,12 @@ impl Drive {
     pub fn fetch_identity_balance(
         &self,
         identity_id: [u8; 32],
-        apply: bool,
         transaction: TransactionArg,
     ) -> Result<Option<Credits>, Error> {
         let mut drive_operations: Vec<DriveOperation> = vec![];
         self.fetch_identity_balance_operations(
             identity_id,
-            apply,
+            true,
             transaction,
             &mut drive_operations,
         )
@@ -33,7 +32,7 @@ impl Drive {
 
     /// Fetches the Identity's balance from the backing store
     /// Passing apply as false get the estimated cost instead
-    pub fn fetch_identity_balance_with_fees(
+    pub fn fetch_identity_balance_with_costs(
         &self,
         identity_id: [u8; 32],
         block_info: &BlockInfo,
@@ -49,6 +48,77 @@ impl Drive {
         )?;
         let fees = calculate_fee(None, Some(drive_operations), &block_info.epoch)?;
         Ok((value, fees))
+    }
+
+    /// Fetches the Identity's balance from the backing store
+    /// If the balance is 0, then also provide debt
+    pub fn fetch_identity_balance_include_debt(
+        &self,
+        identity_id: [u8; 32],
+        transaction: TransactionArg,
+    ) -> Result<Option<SignedCredits>, Error> {
+        let mut drive_operations: Vec<DriveOperation> = vec![];
+        self.fetch_identity_balance_include_debt_operations(
+            identity_id,
+            true,
+            transaction,
+            &mut drive_operations,
+        )
+    }
+
+    /// Fetches the Identity's balance from the backing store
+    /// If the balance is 0, then also provide debt
+    pub fn fetch_identity_balance_include_debt_with_costs(
+        &self,
+        identity_id: [u8; 32],
+        block_info: &BlockInfo,
+        apply: bool,
+        transaction: TransactionArg,
+    ) -> Result<(Option<SignedCredits>, FeeResult), Error> {
+        let mut drive_operations: Vec<DriveOperation> = vec![];
+        let value = self.fetch_identity_balance_include_debt_operations(
+            identity_id,
+            apply,
+            transaction,
+            &mut drive_operations,
+        )?;
+        let fees = calculate_fee(None, Some(drive_operations), &block_info.epoch)?;
+        Ok((value, fees))
+    }
+
+    /// Fetches the Identity's balance from the backing store
+    /// If the balance is 0, then also provide debt
+    pub(crate) fn fetch_identity_balance_include_debt_operations(
+        &self,
+        identity_id: [u8; 32],
+        apply: bool,
+        transaction: TransactionArg,
+        drive_operations: &mut Vec<DriveOperation>,
+    ) -> Result<Option<SignedCredits>, Error> {
+        Ok(self
+            .fetch_identity_balance_operations(identity_id, apply, transaction, drive_operations)?
+            .map(|credits| {
+                if credits > 0 {
+                    Ok::<Option<SignedCredits>, Error>(Some(credits.to_signed()?))
+                } else {
+                    self.fetch_identity_negative_balance_operations(
+                        identity_id,
+                        apply,
+                        transaction,
+                        drive_operations,
+                    )
+                    .map(|negative_credits| {
+                        let negative_credits = negative_credits.ok_or(Error::Drive(
+                            DriveError::CorruptedDriveState(
+                                "Identity has balance but no negative credit holder".to_string(),
+                            ),
+                        ))?;
+                        Ok(Some(-negative_credits.to_signed()?))
+                    })?
+                }
+            })
+            .transpose()?
+            .flatten())
     }
 
     pub(crate) fn fetch_identity_negative_balance_operations(
@@ -106,7 +176,7 @@ impl Drive {
     }
 
     /// The query for the identity balance
-    pub fn identity_balance_query(identity_id: [u8; 32]) -> PathQuery {
+    pub fn identity_balance_query(identity_id: &[u8; 32]) -> PathQuery {
         let balance_path = balance_path_vec();
         let mut query = Query::new();
         query.insert_key(identity_id.to_vec());

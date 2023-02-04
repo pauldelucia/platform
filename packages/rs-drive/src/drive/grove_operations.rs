@@ -458,7 +458,7 @@ impl Drive {
                             &key_info_path,
                             &key_info,
                             in_tree_using_sums,
-                            estimated_value_size as u32,
+                            estimated_value_size,
                             estimated_reference_sizes,
                         )
                     }
@@ -554,13 +554,18 @@ impl Drive {
 
     /// Gets the return value and the cost of a groveDB proved path query.
     /// Pushes the cost to `drive_operations` and returns the return value.
+    /// Verbose should be generally set to false unless one needs to prove
+    /// subsets of a proof.
     pub(crate) fn grove_get_proved_path_query(
         &self,
         path_query: &PathQuery,
+        verbose: bool,
         transaction: TransactionArg,
         drive_operations: &mut Vec<DriveOperation>,
     ) -> Result<Vec<u8>, Error> {
-        let CostContext { value, cost } = self.grove.get_proved_path_query(path_query, transaction);
+        let CostContext { value, cost } =
+            self.grove
+                .get_proved_path_query(path_query, verbose, transaction);
         drive_operations.push(CalculatedCostOperation(cost));
         value.map_err(Error::GroveDB)
     }
@@ -654,7 +659,7 @@ impl Drive {
                         GroveDb::average_case_for_has_raw(
                             &key_info_path,
                             &key_info,
-                            estimated_value_size as u32,
+                            estimated_value_size,
                             in_tree_using_sums,
                         )
                     }

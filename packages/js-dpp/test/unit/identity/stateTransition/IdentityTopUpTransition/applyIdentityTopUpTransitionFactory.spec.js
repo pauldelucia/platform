@@ -2,7 +2,6 @@ const applyIdentityTopUpTransitionFactory = require(
   '../../../../../lib/identity/stateTransition/IdentityTopUpTransition/applyIdentityTopUpTransitionFactory',
 );
 
-const getIdentityFixture = require('../../../../../lib/test/fixtures/getIdentityFixture');
 const getIdentityTopUpTransitionFixture = require('../../../../../lib/test/fixtures/getIdentityTopUpTransitionFixture');
 
 const { convertSatoshiToCredits } = require('../../../../../lib/identity/creditsConverter');
@@ -45,6 +44,11 @@ describe('applyIdentityTopUpTransitionFactory', () => {
 
     expect(stateRepositoryMock.addToIdentityBalance).to.have.been.calledOnceWithExactly(
       stateTransition.getOwnerId(),
+      balanceToTopUp,
+      executionContext,
+    );
+
+    expect(stateRepositoryMock.addToSystemCredits).to.have.been.calledOnceWithExactly(
       balanceToTopUp,
       executionContext,
     );
