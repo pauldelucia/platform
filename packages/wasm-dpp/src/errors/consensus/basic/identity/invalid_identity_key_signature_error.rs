@@ -1,14 +1,15 @@
+use dpp::identity::KeyID;
 use wasm_bindgen::prelude::*;
 use dpp::identity::KeyID;
 
 #[wasm_bindgen(js_name=InvalidIdentityKeySignatureError)]
 pub struct InvalidIdentityKeySignatureErrorWasm {
-    public_key_id: u32,
+    public_key_id: KeyID,
     code: u32,
 }
 
 impl InvalidIdentityKeySignatureErrorWasm {
-    pub fn new(public_key_id: u32, code: u32) -> Self {
+    pub fn new(public_key_id: KeyID, code: u32) -> Self {
         InvalidIdentityKeySignatureErrorWasm {
             public_key_id,
             code,

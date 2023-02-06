@@ -2,7 +2,6 @@
 
 pub mod contract_bounds;
 pub mod factory;
-pub mod in_creation;
 pub mod key_type;
 pub mod purpose;
 pub mod security_level;
@@ -27,7 +26,7 @@ use crate::util::vec;
 use crate::SerdeParsingError;
 
 use crate::identity::contract_bounds::ContractBounds;
-pub use in_creation::IdentityPublicKeyInCreation;
+use crate::identity::state_transition::identity_public_key_transitions::IdentityPublicKeyCreateTransition;
 
 pub type KeyID = u32;
 pub type TimestampMillis = u64;
@@ -49,9 +48,9 @@ pub struct IdentityPublicKey {
     pub disabled_at: Option<TimestampMillis>,
 }
 
-impl Into<IdentityPublicKeyInCreation> for &IdentityPublicKey {
-    fn into(self) -> IdentityPublicKeyInCreation {
-        IdentityPublicKeyInCreation {
+impl Into<IdentityPublicKeyCreateTransition> for &IdentityPublicKey {
+    fn into(self) -> IdentityPublicKeyCreateTransition {
+        IdentityPublicKeyCreateTransition {
             id: self.id,
             purpose: self.purpose,
             security_level: self.security_level,
@@ -90,7 +89,7 @@ impl IdentityPublicKey {
             KeyType::ECDSA_SECP256K1 => {
                 let key = match self.data.len() {
                     // TODO: We need to update schema and tests for 65 len keys
-                    65 | 33 => ECDSAPublicKey::from_slice(&self.data.as_slice())
+                    65 | 33 => ECDSAPublicKey::from_slice(self.data.as_slice())
                         .map_err(|e| anyhow!("unable to create pub key - {}", e))?,
                     _ => {
                         return Err(ProtocolError::ParsingError(format!(
@@ -215,7 +214,7 @@ impl Into<CborValue> for &IdentityPublicKey {
 
 pub fn de_base64_to_vec<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
     let data: String = Deserialize::deserialize(d)?;
-    base64::decode(&data)
+    base64::decode(data)
         .map_err(|e| serde::de::Error::custom(format!("unable to decode from bas64 - {}", e)))
 }
 
@@ -223,5 +222,5 @@ pub fn se_vec_to_base64<S>(buffer: &Vec<u8>, serializer: S) -> Result<S::Ok, S::
 where
     S: Serializer,
 {
-    serializer.serialize_str(&base64::encode(&buffer))
+    serializer.serialize_str(&base64::encode(buffer))
 }

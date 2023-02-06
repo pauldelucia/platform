@@ -5,8 +5,8 @@ use integer_encoding::VarInt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
+use crate::identity::identity_public_key;
 use crate::identity::state_transition::asset_lock_proof::AssetLockProof;
-use crate::identity::{identity_public_key, PartialIdentityInfo};
 use crate::prelude::Revision;
 use crate::util::cbor_value::{CborBTreeMapHelper, CborCanonicalMap};
 use crate::util::deserializer;
@@ -34,6 +34,15 @@ pub struct Identity {
     pub asset_lock_proof: Option<AssetLockProof>,
     #[serde(skip)]
     pub metadata: Option<Metadata>,
+}
+
+/// An identity struct that represent partially set/loaded identity data.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PartialIdentity {
+    pub id: Identifier,
+    pub loaded_public_keys: BTreeMap<KeyID, IdentityPublicKey>,
+    pub balance: Option<u64>,
+    pub revision: Option<Revision>,
 }
 
 mod public_key_serialization {
@@ -163,11 +172,7 @@ impl Identity {
 
     /// Get the biggest public KeyID
     pub fn get_public_key_max_id(&self) -> KeyID {
-        self.public_keys
-            .keys()
-            .map(|pk| *pk)
-            .max()
-            .unwrap_or_default()
+        self.public_keys.keys().copied().max().unwrap_or_default()
     }
 
     /// Converts the identity to a cbor buffer (same as to_cbor)
@@ -292,11 +297,11 @@ impl Identity {
 
     /// Computes the hash of an identity
     pub fn hash(&self) -> Result<Vec<u8>, ProtocolError> {
-        Ok(hash::hash(&self.to_buffer()?))
+        Ok(hash::hash(self.to_buffer()?))
     }
 
     /// Convenience method to get Partial Identity Info
-    pub fn into_partial_identity_info(self) -> PartialIdentityInfo {
+    pub fn into_partial_identity_info(self) -> PartialIdentity {
         let Identity {
             id,
             public_keys,
@@ -304,7 +309,7 @@ impl Identity {
             revision,
             ..
         } = self;
-        PartialIdentityInfo {
+        PartialIdentity {
             id,
             loaded_public_keys: public_keys,
             balance: Some(balance),

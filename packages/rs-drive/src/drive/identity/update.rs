@@ -12,7 +12,7 @@ use crate::drive::identity::key::fetch::{
     IdentityKeysRequest, KeyIDIdentityPublicKeyPairVec, KeyRequestType,
 };
 use crate::fee::result::FeeResult;
-use crate::fee_pools::epochs::Epoch;
+
 use dpp::identity::{IdentityPublicKey, KeyID};
 use dpp::prelude::{Revision, TimestampMillis};
 use grovedb::{Element, EstimatedLayerInformation, TransactionArg};
@@ -277,6 +277,7 @@ mod tests {
 
     mod add_new_keys_to_identity {
         use super::*;
+        use crate::fee_pools::epochs::Epoch;
 
         #[test]
         fn should_add_one_new_key_to_identity() {
@@ -421,6 +422,7 @@ mod tests {
 
     mod disable_identity_keys {
         use super::*;
+        use crate::fee_pools::epochs::Epoch;
         use chrono::Utc;
 
         #[test]
@@ -577,6 +579,7 @@ mod tests {
 
     mod update_identity_revision {
         use super::*;
+        use crate::fee_pools::epochs::Epoch;
 
         #[test]
         fn should_update_revision() {

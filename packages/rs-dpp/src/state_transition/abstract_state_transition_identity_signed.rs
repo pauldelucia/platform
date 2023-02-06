@@ -219,8 +219,8 @@ mod test {
         }
     }
 
-    impl Into<StateTransition> for ExampleStateTransition {
-        fn into(self) -> StateTransition {
+    impl From<ExampleStateTransition> for StateTransition {
+        fn from(_val: ExampleStateTransition) -> Self {
             let st = DocumentsBatchTransition::default();
             StateTransition::DocumentsBatch(st)
         }

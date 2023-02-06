@@ -17,7 +17,7 @@ pub const BINARY_DATA_FIELDS: [&str; 2] = ["data", "signature"];
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct IdentityPublicKeyInCreation {
+pub struct IdentityPublicKeyCreateTransition {
     pub id: KeyID,
     pub purpose: Purpose,
     pub security_level: SecurityLevel,
@@ -30,9 +30,9 @@ pub struct IdentityPublicKeyInCreation {
     pub signature: Vec<u8>,
 }
 
-impl IdentityPublicKeyInCreation {
+impl IdentityPublicKeyCreateTransition {
     pub fn to_identity_public_key(self) -> IdentityPublicKey {
-        let IdentityPublicKeyInCreation {
+        let Self {
             id,
             purpose,
             security_level,
@@ -68,7 +68,7 @@ impl IdentityPublicKeyInCreation {
 
     /// Return raw data, with all binary fields represented as arrays
     pub fn to_raw_json_object(&self, skip_signature: bool) -> Result<JsonValue, SerdeParsingError> {
-        let mut value = serde_json::to_value(&self)?;
+        let mut value = serde_json::to_value(self)?;
 
         if skip_signature {
             if let JsonValue::Object(ref mut o) = value {
@@ -123,7 +123,7 @@ impl IdentityPublicKeyInCreation {
             key_value_map.as_vec("data", "Identity public key must have a data")?;
         let signature_bytes = key_value_map.as_vec("signature", "").unwrap_or_default();
 
-        Ok(IdentityPublicKeyInCreation {
+        Ok(Self {
             id: id.into(),
             purpose: purpose.try_into()?,
             security_level: security_level.try_into()?,
@@ -156,7 +156,7 @@ impl IdentityPublicKeyInCreation {
     }
 }
 
-impl Into<IdentityPublicKey> for &IdentityPublicKeyInCreation {
+impl Into<IdentityPublicKey> for &IdentityPublicKeyCreateTransition {
     fn into(self) -> IdentityPublicKey {
         IdentityPublicKey {
             id: self.id,

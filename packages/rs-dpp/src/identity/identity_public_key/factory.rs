@@ -14,7 +14,7 @@ pub type KeyCount = KeyID;
 pub type UsedKeyMatrix = Vec<bool>;
 
 impl IdentityPublicKey {
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_key(id: KeyID, seed: Option<u64>) -> Self {
         let mut rng = match seed {
             None => StdRng::from_entropy(),
@@ -23,7 +23,7 @@ impl IdentityPublicKey {
         Self::random_key_with_rng(id, &mut rng, None).unwrap()
     }
 
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_keys(first_id: KeyID, count: KeyCount, seed: Option<u64>) -> Vec<Self> {
         let mut rng = match seed {
             None => StdRng::from_entropy(),
@@ -36,7 +36,7 @@ impl IdentityPublicKey {
             .collect()
     }
 
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_authentication_keys(
         first_id: KeyID,
         count: KeyCount,
@@ -53,7 +53,7 @@ impl IdentityPublicKey {
             .collect()
     }
 
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_authentication_key_with_rng(
         id: KeyID,
         rng: &mut StdRng,
@@ -71,18 +71,15 @@ impl IdentityPublicKey {
         // now we need to find the first bool that isn't set to true
         let mut needed_pos = None;
         let mut counter = 0;
-        key_matrix
-            .into_iter()
-            .enumerate()
-            .for_each(|(pos, is_set)| {
-                if !*is_set {
-                    if counter == key_number {
-                        needed_pos = Some(pos as u8);
-                        *is_set = true;
-                    }
-                    counter += 1;
+        key_matrix.iter_mut().enumerate().for_each(|(pos, is_set)| {
+            if !*is_set {
+                if counter == key_number {
+                    needed_pos = Some(pos as u8);
+                    *is_set = true;
                 }
-            });
+                counter += 1;
+            }
+        });
         let needed_pos = needed_pos.ok_or(ProtocolError::PublicKeyGenerationError(
             "too many keys already created".to_string(),
         ))?;
@@ -104,7 +101,7 @@ impl IdentityPublicKey {
         })
     }
 
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_key_with_rng(
         id: KeyID,
         rng: &mut StdRng,
@@ -122,18 +119,15 @@ impl IdentityPublicKey {
         // now we need to find the first bool that isn't set to true
         let mut needed_pos = None;
         let mut counter = 0;
-        key_matrix
-            .into_iter()
-            .enumerate()
-            .for_each(|(pos, is_set)| {
-                if !*is_set {
-                    if counter == key_number {
-                        needed_pos = Some(pos as u8);
-                        *is_set = true;
-                    }
-                    counter += 1;
+        key_matrix.iter_mut().enumerate().for_each(|(pos, is_set)| {
+            if !*is_set {
+                if counter == key_number {
+                    needed_pos = Some(pos as u8);
+                    *is_set = true;
                 }
-            });
+                counter += 1;
+            }
+        });
         let needed_pos = needed_pos.ok_or(ProtocolError::PublicKeyGenerationError(
             "too many keys already created".to_string(),
         ))?;
@@ -158,6 +152,7 @@ impl IdentityPublicKey {
         })
     }
 
+    // TODO: Move to a separate module under a feature
     pub fn max_possible_size_key(id: KeyID) -> Self {
         let key_type = *KEY_TYPE_MAX_SIZE_TYPE;
         let purpose = AUTHENTICATION;
@@ -177,7 +172,7 @@ impl IdentityPublicKey {
         }
     }
 
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_ecdsa_master_authentication_key_with_rng(id: KeyID, rng: &mut StdRng) -> Self {
         let key_type = ECDSA_SECP256K1;
         let purpose = AUTHENTICATION;
@@ -196,7 +191,7 @@ impl IdentityPublicKey {
         }
     }
 
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_authentication_keys_with_rng(key_count: KeyCount, rng: &mut StdRng) -> Vec<Self> {
         let mut used_key_matrix = [false; 16].to_vec();
         (0..key_count)
@@ -207,14 +202,14 @@ impl IdentityPublicKey {
             .collect()
     }
 
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_keys_with_rng(key_count: KeyCount, rng: &mut StdRng) -> Vec<Self> {
         (0..key_count)
             .map(|i| Self::random_key_with_rng(i, rng, None).unwrap())
             .collect()
     }
 
-    // TODO: Should be enabled only with feature
+    // TODO: Move to a separate module under a feature
     pub fn random_unique_keys_with_rng(
         key_count: KeyCount,
         rng: &mut StdRng,

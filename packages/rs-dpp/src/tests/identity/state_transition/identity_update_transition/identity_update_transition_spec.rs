@@ -2,13 +2,13 @@ use chrono::Utc;
 use serde_json::{json, Value as JsonValue};
 
 use crate::identity::contract_bounds::ContractBounds;
-use crate::identity::IdentityPublicKeyInCreation;
+use crate::identity::state_transition::identity_public_key_transitions::IdentityPublicKeyCreateTransition;
+
 use crate::{
     identity::{
         state_transition::identity_update_transition::identity_update_transition::IdentityUpdateTransition,
         KeyType, Purpose, SecurityLevel,
     },
-    prelude::IdentityPublicKey,
     state_transition::{
         StateTransitionConvert, StateTransitionIdentitySigned, StateTransitionType,
     },
@@ -42,7 +42,7 @@ fn get_type() {
 fn set_identity_id() {
     let TestData { mut transition, .. } = setup_test();
     let id = generate_random_identifier_struct();
-    transition.set_identity_id(id.clone());
+    transition.set_identity_id(id);
     assert_eq!(&id, transition.get_identity_id());
 }
 
@@ -77,16 +77,17 @@ fn get_public_keys_to_add() {
 #[test]
 fn set_public_keys_to_add() {
     let TestData { mut transition, .. } = setup_test();
-    let id_public_key = IdentityPublicKeyInCreation {
-						id : 0,
-            key_type: KeyType::BLS12_381,
-            purpose: Purpose::AUTHENTICATION,
-            security_level : SecurityLevel::CRITICAL,
-            read_only: true,
-            data: hex::decode("01fac99ca2c8f39c286717c213e190aba4b7af76db320ec43f479b7d9a2012313a0ae59ca576edf801444bc694686694").unwrap(),
-            signature : Default::default(),
+    let id_public_key = IdentityPublicKeyCreateTransition {
+        id: 0,
+        key_type: KeyType::BLS12_381,
+        purpose: Purpose::AUTHENTICATION,
+        security_level : SecurityLevel::CRITICAL,
+        read_only: true,
+        data: hex::decode("01fac99ca2c8f39c286717c213e190aba4b7af76db320ec43f479b7d9a2012313a0ae59ca576edf801444bc694686694").unwrap(),
+        signature : Default::default(),
         contract_bounds: None,
     };
+
     transition.set_public_keys_to_add(vec![id_public_key.clone()]);
 
     assert_eq!(vec![id_public_key], transition.get_public_keys_to_add());
@@ -220,7 +221,7 @@ fn to_json() {
                 "contractBounds": null,
                 "data" : "AkVuTKyF3YgKLAQlLEtaUL2HTditwGILfWUVqjzYnIgH",
                 "readOnly" : false,
-                "signature" : base64::encode(vec![0;65]).to_string(),
+                "signature" : base64::encode(vec![0;65]),
             }
         ]
     });

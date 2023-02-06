@@ -1,15 +1,7 @@
-use crate::drive::identity::key::fetch::{IdentityKeysRequest, KeyIDIdentityPublicKeyPairBTreeMap};
 use crate::drive::Drive;
-use crate::error::Error;
-use crate::fee::default_costs::KnownCostItem::FetchIdentityBalanceProcessingCost;
-use crate::fee::op::DriveOperation;
-use crate::fee::result::FeeResult;
-use crate::fee_pools::epochs::Epoch;
-use dpp::identifier::Identifier;
-use dpp::identity::PartialIdentityInfo;
-use grovedb::TransactionArg;
 
 impl Drive {
+    // TODO: We deal with it in upcoming PR
     // /// Fetches the Identity's balance as PartialIdentityInfo from the backing store
     // /// Passing apply as false get the estimated cost instead
     // pub fn prove_identity_with_balance_with_cost(

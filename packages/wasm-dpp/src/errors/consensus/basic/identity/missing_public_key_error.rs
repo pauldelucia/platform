@@ -1,14 +1,15 @@
+use dpp::identity::KeyID;
 use wasm_bindgen::prelude::*;
 use dpp::identity::KeyID;
 
 #[wasm_bindgen(js_name=MissingPublicKeyError)]
 pub struct MissingPublicKeyErrorWasm {
-    public_key_id: u32,
+    public_key_id: KeyID,
     code: u32,
 }
 
 impl MissingPublicKeyErrorWasm {
-    pub fn new(public_key_id: u32, code: u32) -> Self {
+    pub fn new(public_key_id: KeyID, code: u32) -> Self {
         MissingPublicKeyErrorWasm {
             public_key_id,
             code,
