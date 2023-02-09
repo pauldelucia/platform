@@ -14,6 +14,7 @@ use crate::ProtocolError;
 use ciborium::value::Value;
 use serde::{Deserialize, Serialize};
 use crate::data_contract::document_type::storage_requirements::keys_for_document_type::StorageKeyRequirements;
+use crate::prelude::DataContract;
 
 pub const PROTOCOL_VERSION: u32 = 1;
 pub const CONTRACT_DOCUMENTS_PATH_HEIGHT: u16 = 4;

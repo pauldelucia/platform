@@ -21,10 +21,16 @@ use std::collections::{BTreeMap, HashMap};
 use dpp::data_contract::document_type::DocumentType;
 use dpp::data_contract::DriveContractExt;
 
-pub struct ContractApplyInfo<'a> {
-    contract: &'a DataContract,
-    document_type_keys: BTreeMap<&'a DocumentType, Vec<KeyID>>,
-    contract_keys: Vec<KeyID>,
+pub enum ContractApplyInfo<'a> {
+    /// The root_id is either a contract id or an owner id
+    /// It is a contract id for in the case of contract bound keys or contract
+    /// document bound keys
+    /// In the case
+    ContractBased {
+        root_id: &'a DataContract
+        document_type_keys: BTreeMap<&'a str, Vec<KeyID>>,
+        contract_keys: Vec<KeyID>,
+    },
 }
 
 impl ContractApplyInfo {
@@ -50,20 +56,25 @@ impl ContractApplyInfo {
         let contract = &contract_fetch_info.contract;
         match contract_bounds {
             ContractBounds::SingleContract { .. } => Ok(ContractApplyInfo {
-                contract,
+                root_id: contract,
                 document_type_keys: Default::default(),
                 contract_keys: vec![key_id],
             }),
             ContractBounds::SingleContractDocumentType { document_type, .. } => {
                 let document_type = contract
                     .document_type_for_name(document_type)
-                    .map_err(Error::Contract)?;
+                    .map_err(Error::Protocol)?;
                 Ok(ContractApplyInfo {
-                    contract,
-                    document_type_keys: BTreeMap::from([(document_type, vec![key_id])]),
+                    root_id: contract,
+                    document_type_keys: BTreeMap::from([(&document_type.name, vec![key_id])]),
                     contract_keys: vec![],
                 })
             }
+            ContractBounds::MultipleContractsOfSameOwner { .. } => Ok(ContractApplyInfo {
+                root_id: contract,
+                document_type_keys: Default::default(),
+                contract_keys: vec![key_id],
+            }),
         }
     }
 }
@@ -111,7 +122,7 @@ impl Drive {
         >,
         transaction: TransactionArg,
         drive_operations: &mut Vec<DriveOperation>,
-    ) -> Result<Vec<DriveOperation>, Error> {
+    ) -> Result<(), Error> {
         let identity_path = identity_path_vec(identity_id.as_slice());
         // we insert the contract root tree if it doesn't exist already
         self.batch_insert_empty_tree_if_not_exists_check_existing_operations(
@@ -124,7 +135,7 @@ impl Drive {
 
         for contract_infos in contract_infos.into_iter() {
             let ContractApplyInfo {
-                contract,
+                root_id: contract,
                 document_type_keys,
                 contract_keys,
             } = contract_infos;
@@ -155,6 +166,6 @@ impl Drive {
                 )?;
             }
         }
-        Ok(batch_operations)
+        Ok(())
     }
 }

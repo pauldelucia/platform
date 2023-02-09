@@ -1,8 +1,6 @@
 use crate::data_contract::DataContract;
 use crate::identifier::Identifier;
-use crate::identity::contract_bounds::ContractBounds::{
-    SingleContract, SingleContractDocumentType,
-};
+use crate::identity::contract_bounds::ContractBounds::{MultipleContractsOfSameOwner, SingleContract, SingleContractDocumentType};
 use crate::identity::identity_public_key::CborValue;
 use crate::util::cbor_value::{CborCanonicalMap, CborMapExtension};
 use crate::ProtocolError;
@@ -32,6 +30,9 @@ pub enum ContractBounds {
         id: Identifier,
         document_type: String,
     } = 1,
+    /// this key can only be used within contracts owned by a specified owner
+    #[serde(rename = "multipleContractsOfSameOwner")]
+    MultipleContractsOfSameOwner { owner_id: Identifier } = 2,
 }
 
 impl ContractBounds {
@@ -63,6 +64,7 @@ impl ContractBounds {
         match self {
             SingleContract { .. } => 0,
             SingleContractDocumentType { .. } => 1,
+            MultipleContractsOfSameOwner { .. } => 2,
         }
     }
 
@@ -80,6 +82,7 @@ impl ContractBounds {
         match self {
             SingleContract { .. } => "singleContract",
             SingleContractDocumentType { .. } => "documentType",
+            MultipleContractsOfSameOwner { .. } => "multipleContractsOfSameOwner",
         }
     }
 
@@ -88,6 +91,7 @@ impl ContractBounds {
         match self {
             SingleContract { id } => id,
             SingleContractDocumentType { id, .. } => id,
+            MultipleContractsOfSameOwner{ owner_id} => owner_id,
         }
     }
 
@@ -96,6 +100,7 @@ impl ContractBounds {
         match self {
             SingleContract { .. } => None,
             SingleContractDocumentType { document_type, .. } => Some(document_type),
+            MultipleContractsOfSameOwner { .. } => None,
         }
     }
 
