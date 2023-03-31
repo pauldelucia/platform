@@ -7,28 +7,23 @@ GROUP=docker
 
 # check if user with our uid exists in the system
 if [ ! $(getent passwd $USER_ID | grep $USER_ID -q) ]; then
-  echo "Creating user $USERNAME ($USER_ID)"
   adduser -u $USER_ID -D -H $USERNAME
 else
   USERNAME=$(getent passwd $USER_ID | cut -d: -f1)
-  echo "User exist: $USERNAME $USER_ID"
 fi
 
 # check if docker group exists in the container
 if [ -z $(getent group $DOCKER_GROUP_ID) ] ; then
-  echo "Creating group $DOCKER_GROUP_ID $GROUP"
   addgroup -g $DOCKER_GROUP_ID $GROUP
 else
   GROUP=$(getent group $DOCKER_GROUP_ID | cut -d: -f1)
-  echo "Group exist: $GROUP $DOCKER_GROUP_ID"
 fi
 
 # check if our user belongs to docker group
 if [ ! $(id -nG $USERNAME | grep -q $GROUP) ]; then
-  echo "Adding $USERNAME to group $GROUP"
   adduser $USERNAME $GROUP
 fi
 
-echo "Starting with: USERNAME: $USERNAME, UID: $USER_ID, GID: $GROUP_ID, USER: $USERNAME, GROUP: $GROUP"
-
 su $USERNAME
+
+exec "$@"
