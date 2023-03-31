@@ -34,12 +34,11 @@ use crate::block::BlockExecutionContext;
 use crate::config::PlatformConfig;
 use crate::error::execution::ExecutionError;
 use crate::error::Error;
-use crate::rpc::core::{CoreRPCLike, DefaultCoreRPC};
+use crate::rpc::core::DefaultCoreRPC;
 use crate::state::PlatformState;
 use drive::drive::Drive;
 
 use drive::drive::defaults::PROTOCOL_VERSION;
-use std::cell::RefCell;
 use std::path::Path;
 use std::sync::RwLock;
 
@@ -47,8 +46,6 @@ use crate::rpc::core::MockCoreRPCLike;
 use dashcore::hashes::hex::FromHex;
 use dashcore::BlockHash;
 use serde_json::json;
-
-mod state_repository;
 
 /// Platform
 pub struct Platform<'a, C> {

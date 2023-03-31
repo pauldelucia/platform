@@ -6,9 +6,10 @@ use crate::{
     execution::fee_pools::epoch::EpochInfo,
     platform::Platform,
     rpc::core::CoreRPCLike,
+    validation::state_transition::validate_state_transition,
 };
 
-use crate::validation::state_transition::StateTransitionValidation;
+use crate::validation::state_transition::ValidateStateTransition;
 use crate::validation::state_transition_action::StateTransitionActionValidation;
 use dpp::prelude::{Identifier, ValidationResult};
 use dpp::state_transition::StateTransition;
@@ -129,7 +130,8 @@ where
         let validation_outcomes = state_transitions
             .into_iter()
             .map(|state_transition| {
-                let state_transition_action_result = state_transition.validate_all(self)?;
+                let state_transition_action_result =
+                    validate_state_transition(self, state_transition)?;
                 state_transition_action_result
                     .and_then_simple_validation(|action| action.validate_fee(&self.drive))?
                     .map_result(|state_transition| {
