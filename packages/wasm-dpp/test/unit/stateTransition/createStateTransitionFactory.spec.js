@@ -1,3 +1,5 @@
+// TODO: fix this test
+
 const createStateTransitionFactory = require('@dashevo/dpp/lib/stateTransition/createStateTransitionFactory');
 
 const DataContractCreateTransition = require('@dashevo/dpp/lib/dataContract/stateTransition/DataContractCreateTransition/DataContractCreateTransition');

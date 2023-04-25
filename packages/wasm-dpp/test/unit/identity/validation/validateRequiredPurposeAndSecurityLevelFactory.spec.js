@@ -1,3 +1,5 @@
+// TODO: fix this test
+
 const IdentityPublicKey = require('@dashevo/dpp/lib/identity/IdentityPublicKey');
 
 const validateRequiredPurposeAndSecurityLevelFactory = require('@dashevo/dpp/lib/identity/validation/validateRequiredPurposeAndSecurityLevelFactory');
@@ -8,8 +10,14 @@ const ValidationResult = require('@dashevo/dpp/lib/validation/ValidationResult')
 
 const MissingMasterPublicKeyError = require('@dashevo/dpp/lib/errors/consensus/basic/identity/MissingMasterPublicKeyError');
 
+const { default: loadWasmDpp } = require('../../../..');
+
 describe('validateRequiredPurposeAndSecurityLevel', () => {
   let validateRequiredPurposeAndSecurityLevel;
+
+  before(async () => {
+    await loadWasmDpp();
+  });
 
   beforeEach(() => {
     validateRequiredPurposeAndSecurityLevel = (
