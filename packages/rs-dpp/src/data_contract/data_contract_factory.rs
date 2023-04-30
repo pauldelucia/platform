@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
@@ -16,13 +15,9 @@ use crate::consensus::basic::decode::SerializedObjectParsingError;
 use crate::consensus::basic::BasicError;
 use crate::consensus::ConsensusError;
 use crate::serialization_traits::{PlatformDeserializable, PlatformSerializable};
-use crate::state_transition::StateTransitionType;
-use crate::util::deserializer;
-use crate::util::deserializer::SplitProtocolVersionOutcome;
 use crate::util::entropy_generator::{DefaultEntropyGenerator, EntropyGenerator};
 use crate::{
     data_contract::{self, generate_data_contract_id},
-    encoding::decode_protocol_entity_factory::DecodeProtocolEntity,
     errors::ProtocolError,
     prelude::Identifier,
     Convertible,
@@ -115,7 +110,7 @@ impl DataContractFactory {
             None
         };
         let mut data_contract = DataContract {
-            protocol_version: self.protocol_version,
+            data_contract_protocol_version: self.protocol_version,
             id: data_contract_id,
             schema: data_contract::SCHEMA_URI.to_string(),
             version: 1,
@@ -178,7 +173,7 @@ impl DataContractFactory {
         })?;
 
         if !skip_validation {
-            let mut value = data_contract.to_object()?;
+            let value = data_contract.to_object()?;
             self.create_from_object(value, skip_validation).await
         } else {
             Ok(data_contract)
@@ -189,16 +184,7 @@ impl DataContractFactory {
         &self,
         data_contract: DataContract,
     ) -> Result<DataContractCreateTransition, ProtocolError> {
-        //todo: is this right for entropy?
-        let entropy = data_contract.entropy;
-        Ok(DataContractCreateTransition {
-            protocol_version: self.protocol_version,
-            transition_type: StateTransitionType::DataContractCreate,
-            data_contract,
-            entropy,
-            signature_public_key_id: 0,
-            signature: Default::default(),
-        })
+        Ok(data_contract.into())
     }
 
     pub fn create_data_contract_update_transition(
@@ -207,8 +193,8 @@ impl DataContractFactory {
     ) -> Result<DataContractUpdateTransition, ProtocolError> {
         let raw_object = BTreeMap::from([
             (
-                st_prop::PROTOCOL_VERSION.to_string(),
-                Value::U32(self.protocol_version),
+                st_prop::STATE_TRANSITION_PROTOCOL_VERSION.to_string(),
+                Value::U32(self.protocol_version), //todo
             ),
             (
                 st_prop::DATA_CONTRACT.to_string(),
@@ -224,6 +210,7 @@ impl DataContractFactory {
 mod tests {
     use super::*;
     use crate::data_contract::property_names;
+    use crate::state_transition::StateTransitionLike;
     use crate::tests::fixtures::get_data_contract_fixture;
     use crate::version::{ProtocolVersionValidator, COMPATIBILITY_MAP, LATEST_VERSION};
     use crate::Convertible;
@@ -277,7 +264,10 @@ mod tests {
             .create(data_contract.owner_id, raw_documents, None, Some(raw_defs))
             .expect("Data Contract should be created");
 
-        assert_eq!(data_contract.protocol_version, result.protocol_version);
+        assert_eq!(
+            data_contract.data_contract_protocol_version,
+            result.data_contract_protocol_version
+        );
         // id is generated based on entropy which is different every time the `create` call is used
         assert_eq!(data_contract.id.len(), result.id.len());
         assert_ne!(data_contract.id, result.id);
@@ -301,7 +291,10 @@ mod tests {
             .await
             .expect("Data Contract should be created");
 
-        assert_eq!(data_contract.protocol_version, result.protocol_version);
+        assert_eq!(
+            data_contract.data_contract_protocol_version,
+            result.data_contract_protocol_version
+        );
         assert_eq!(data_contract.id, result.id);
         assert_eq!(data_contract.schema, result.schema);
         assert_eq!(data_contract.owner_id, result.owner_id);
@@ -326,7 +319,10 @@ mod tests {
             .await
             .expect("Data Contract should be created from the buffer");
 
-        assert_eq!(data_contract.protocol_version, result.protocol_version);
+        assert_eq!(
+            data_contract.data_contract_protocol_version,
+            result.data_contract_protocol_version
+        );
         assert_eq!(data_contract.id, result.id);
         assert_eq!(data_contract.schema, result.schema);
         assert_eq!(data_contract.owner_id, result.owner_id);
@@ -348,8 +344,11 @@ mod tests {
             .create_data_contract_create_transition(data_contract.clone())
             .expect("Data Contract Transition should be created");
 
-        assert_eq!(1, result.get_protocol_version());
-        assert_eq!(&data_contract.entropy, &result.entropy);
-        assert_eq!(raw_data_contract, result.data_contract.to_object().unwrap());
+        assert_eq!(1, result.state_transition_protocol_version());
+        assert_eq!(&data_contract.entropy, result.entropy_ref());
+        assert_eq!(
+            raw_data_contract,
+            result.data_contract().to_object().unwrap()
+        );
     }
 }

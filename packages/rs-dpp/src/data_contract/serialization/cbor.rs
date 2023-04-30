@@ -68,7 +68,7 @@ impl DataContract {
         .map_err(|e| ProtocolError::ParsingError(e.to_string()))?;
 
         let mut data_contract = Self {
-            protocol_version,
+            data_contract_protocol_version: protocol_version,
             id: contract_id,
             schema,
             version,
@@ -88,7 +88,7 @@ impl DataContract {
     }
 
     pub fn to_cbor(&self) -> Result<Vec<u8>, ProtocolError> {
-        let mut buf = self.protocol_version.encode_var_vec();
+        let mut buf = self.data_contract_protocol_version.encode_var_vec();
 
         let mut contract_cbor_map = self.to_cbor_canonical_map()?;
 

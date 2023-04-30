@@ -66,7 +66,10 @@ pub async fn validate_data_contract_create_transition_state(
 ) -> Result<ConsensusValidationResult<DataContractCreateTransitionAction>, ProtocolError> {
     // Data contract shouldn't exist
     let maybe_existing_data_contract: Option<DataContract> = state_repository
-        .fetch_data_contract(&state_transition.data_contract.id, Some(execution_context))
+        .fetch_data_contract(
+            &state_transition.data_contract().id,
+            Some(execution_context),
+        )
         .await?
         .map(TryInto::try_into)
         .transpose()
@@ -78,7 +81,7 @@ pub async fn validate_data_contract_create_transition_state(
     } else {
         Ok(ConsensusValidationResult::new_with_errors(vec![
             StateError::DataContractAlreadyPresentError(DataContractAlreadyPresentError::new(
-                state_transition.data_contract.id.to_owned(),
+                state_transition.data_contract().id.to_owned(),
             ))
             .into(),
         ]))
@@ -87,6 +90,7 @@ pub async fn validate_data_contract_create_transition_state(
 
 #[cfg(test)]
 mod test {
+    use crate::data_contract::state_transition::data_contract_create_transition::DataContractCreateTransitionV0;
     use crate::{
         state_repository::MockStateRepositoryLike, tests::fixtures::get_data_contract_fixture,
     };
@@ -97,11 +101,11 @@ mod test {
     async fn should_return_valid_result_on_dry_run() {
         let mut state_repository_mock = MockStateRepositoryLike::new();
         let data_contract = get_data_contract_fixture(None);
-        let state_transition = &DataContractCreateTransition {
+        let state_transition = DataContractCreateTransition::V0(DataContractCreateTransitionV0 {
             entropy: data_contract.entropy,
             data_contract,
             ..Default::default()
-        };
+        });
 
         state_repository_mock
             .expect_fetch_data_contract()
@@ -110,7 +114,7 @@ mod test {
 
         let result = validate_data_contract_create_transition_state(
             &state_repository_mock,
-            state_transition,
+            &state_transition,
             &execution_context,
         )
         .await

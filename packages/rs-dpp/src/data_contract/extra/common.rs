@@ -4,7 +4,6 @@ use crate::prelude::DataContract;
 #[cfg(feature = "cbor")]
 use crate::util::cbor_serializer::serializable_value_to_cbor;
 use crate::ProtocolError;
-use crate::ProtocolError::ValueError;
 use platform_value::Identifier;
 use std::convert::TryInto;
 use std::fs::File;

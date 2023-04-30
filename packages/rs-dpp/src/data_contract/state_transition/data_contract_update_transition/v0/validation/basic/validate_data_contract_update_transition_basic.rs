@@ -8,6 +8,7 @@ use crate::consensus::basic::decode::ProtocolVersionParsingError;
 use crate::consensus::basic::document::DataContractNotPresentError;
 use crate::state_transition::state_transition_execution_context::StateTransitionExecutionContext;
 use crate::validation::AsyncDataValidatorWithContext;
+use crate::version::PlatformVersion;
 use crate::{
     consensus::basic::BasicError,
     data_contract::{
@@ -35,7 +36,7 @@ use super::validate_indices_are_backward_compatible;
 
 lazy_static! {
     pub static ref DATA_CONTRACT_UPDATE_SCHEMA: JsonValue = serde_json::from_str(include_str!(
-        "./../../../../../schema/data_contract/stateTransition/dataContractUpdate.json"
+        "./../../../../../../schema/data_contract/stateTransition/dataContractUpdate.json"
     ))
     .expect("schema for Data Contract Update should be a valid json");
     pub static ref EMPTY_JSON: JsonValue = json!({});
@@ -95,17 +96,19 @@ where
             return Ok(result);
         }
 
-        let protocol_version =
-            match raw_state_transition.get_integer(property_names::PROTOCOL_VERSION) {
-                Ok(v) => v,
-                Err(parsing_error) => {
-                    return Ok(SimpleConsensusValidationResult::new_with_errors(vec![
-                        ProtocolVersionParsingError::new(parsing_error.to_string()).into(),
-                    ]))
-                }
-            };
+        let state_transition_version = match raw_state_transition
+            .get_integer(property_names::STATE_TRANSITION_PROTOCOL_VERSION)
+        {
+            Ok(v) => v,
+            Err(parsing_error) => {
+                return Ok(SimpleConsensusValidationResult::new_with_errors(vec![
+                    ProtocolVersionParsingError::new(parsing_error.to_string()).into(),
+                ]))
+            }
+        };
 
-        let result = self.protocol_version_validator.validate(protocol_version)?;
+        let result = PlatformVersion::get(self.protocol_version_validator.protocol_version())?
+            .validate_contract_update_state_transition_version(state_transition_version);
         if !result.is_valid() {
             return Ok(result);
         }

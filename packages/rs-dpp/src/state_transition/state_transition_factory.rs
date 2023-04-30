@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use std::{
     convert::{TryFrom, TryInto},
     sync::Arc,
@@ -12,7 +11,7 @@ use crate::consensus::basic::decode::SerializedObjectParsingError;
 use crate::data_contract::errors::DataContractNotPresentError;
 use crate::data_contract::state_transition::errors::MissingDataContractIdError;
 use crate::identity::state_transition::identity_update_transition::identity_update_transition::IdentityUpdateTransition;
-use crate::serialization_traits::{PlatformDeserializable, PlatformSerializable};
+use crate::serialization_traits::PlatformDeserializable;
 use crate::state_transition::errors::StateTransitionError;
 use crate::state_transition::StateTransitionConvert;
 use crate::util::deserializer;
@@ -27,7 +26,6 @@ use crate::{
         DataContract,
     },
     document::DocumentsBatchTransition,
-    encoding::decode_protocol_entity_factory::DecodeProtocolEntity,
     identity::state_transition::{
         identity_create_transition::IdentityCreateTransition,
         identity_credit_withdrawal_transition::IdentityCreditWithdrawalTransition,
@@ -38,7 +36,7 @@ use crate::{
     validation::AsyncDataValidatorWithContext,
     BlsModule, ProtocolError,
 };
-use platform_value::{Value, ValueMapHelper};
+use platform_value::Value;
 
 use super::{
     state_transition_execution_context::StateTransitionExecutionContext,
@@ -296,7 +294,7 @@ mod test {
 
         assert!(
             matches!(result, StateTransition::DataContractCreate(transition) if  {
-                transition.get_data_contract().to_json_object().unwrap() == data_contract.to_json_object().unwrap()
+                transition.data_contract().to_json_object().unwrap() == data_contract.to_json_object().unwrap()
             })
         )
     }

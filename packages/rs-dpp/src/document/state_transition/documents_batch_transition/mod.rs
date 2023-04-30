@@ -513,15 +513,15 @@ impl StateTransitionConvert for DocumentsBatchTransition {
 }
 
 impl StateTransitionLike for DocumentsBatchTransition {
-    fn get_modified_data_ids(&self) -> Vec<Identifier> {
+    fn modified_data_ids(&self) -> Vec<Identifier> {
         self.transitions.iter().map(|t| t.base().id).collect()
     }
 
-    fn get_protocol_version(&self) -> u32 {
+    fn state_transition_protocol_version(&self) -> u32 {
         self.protocol_version
     }
 
-    fn get_signature(&self) -> &BinaryData {
+    fn signature(&self) -> &BinaryData {
         if let Some(ref signature) = self.signature {
             signature
         } else {
@@ -531,7 +531,7 @@ impl StateTransitionLike for DocumentsBatchTransition {
         }
     }
 
-    fn get_type(&self) -> StateTransitionType {
+    fn state_transition_type(&self) -> StateTransitionType {
         self.transition_type
     }
 

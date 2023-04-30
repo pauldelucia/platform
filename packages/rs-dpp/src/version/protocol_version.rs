@@ -1,3 +1,5 @@
+use crate::consensus::basic::unsupported_version_error::UnsupportedVersionError;
+use crate::validation::SimpleConsensusValidationResult;
 use crate::version::v0::PLATFORM_V0;
 use crate::ProtocolError;
 
@@ -45,57 +47,187 @@ pub struct PlatformVersion {
     pub drive_structure: DriveStructureVersion,
 }
 
-const PLATFORM_VERSIONS: &'static [PlatformVersion] = &[PLATFORM_V0];
+pub const PLATFORM_VERSIONS: &'static [PlatformVersion] = &[PLATFORM_V0];
 
-const LATEST_VERSION: PlatformVersion = PLATFORM_V0;
+pub const LATEST_PLATFORM_VERSION: &'static PlatformVersion = &PLATFORM_V0;
 
 impl PlatformVersion {
-    pub fn get(version: u32) -> Result<Self, ProtocolError> {
-        PLATFORM_VERSIONS.get(version as usize).copied().ok_or(
-            ProtocolError::UnknownProtocolVersionError(format!("no platform version {version}")),
-        )
+    pub fn get<'a>(version: u32) -> Result<&'a Self, ProtocolError> {
+        PLATFORM_VERSIONS
+            .get(version as usize)
+            .ok_or(ProtocolError::UnknownProtocolVersionError(format!(
+                "no platform version {version}"
+            )))
     }
 
-    pub fn validate_contract_version(&self, version: u16) -> bool {
-        self.contract.check_version(version)
+    pub fn validate_contract_version(&self, version: u16) -> SimpleConsensusValidationResult {
+        if self.contract.check_version(version) {
+            SimpleConsensusValidationResult::default()
+        } else {
+            SimpleConsensusValidationResult::new_with_error(
+                UnsupportedVersionError::new(
+                    version,
+                    self.contract.min_version,
+                    self.contract.max_version,
+                )
+                .into(),
+            )
+        }
     }
 
-    pub fn validate_identity_create_state_transition_version(&self, version: u16) -> bool {
-        self.state_transitions
+    pub fn validate_identity_create_state_transition_version(
+        &self,
+        version: u16,
+    ) -> SimpleConsensusValidationResult {
+        if self
+            .state_transitions
             .identity_create_state_transition
             .check_version(version)
+        {
+            SimpleConsensusValidationResult::default()
+        } else {
+            SimpleConsensusValidationResult::new_with_error(
+                UnsupportedVersionError::new(
+                    version,
+                    self.state_transitions
+                        .identity_create_state_transition
+                        .min_version,
+                    self.state_transitions
+                        .identity_create_state_transition
+                        .max_version,
+                )
+                .into(),
+            )
+        }
     }
 
-    pub fn validate_identity_top_up_state_transition_version(&self, version: u16) -> bool {
-        self.state_transitions
+    pub fn validate_identity_top_up_state_transition_version(
+        &self,
+        version: u16,
+    ) -> SimpleConsensusValidationResult {
+        if self
+            .state_transitions
             .identity_top_up_state_transition
             .check_version(version)
+        {
+            SimpleConsensusValidationResult::default()
+        } else {
+            SimpleConsensusValidationResult::new_with_error(
+                UnsupportedVersionError::new(
+                    version,
+                    self.state_transitions
+                        .identity_top_up_state_transition
+                        .min_version,
+                    self.state_transitions
+                        .identity_top_up_state_transition
+                        .max_version,
+                )
+                .into(),
+            )
+        }
     }
 
-    pub fn validate_identity_update_state_transition_version(&self, version: u16) -> bool {
-        self.state_transitions
+    pub fn validate_identity_update_state_transition_version(
+        &self,
+        version: u16,
+    ) -> SimpleConsensusValidationResult {
+        if self
+            .state_transitions
             .identity_update_state_transition
             .check_version(version)
+        {
+            SimpleConsensusValidationResult::default()
+        } else {
+            SimpleConsensusValidationResult::new_with_error(
+                UnsupportedVersionError::new(
+                    version,
+                    self.state_transitions
+                        .identity_update_state_transition
+                        .min_version,
+                    self.state_transitions
+                        .identity_update_state_transition
+                        .max_version,
+                )
+                .into(),
+            )
+        }
     }
 
     pub fn validate_identity_credit_withdrawal_state_transition_version(
         &self,
         version: u16,
-    ) -> bool {
-        self.state_transitions
+    ) -> SimpleConsensusValidationResult {
+        if self
+            .state_transitions
             .identity_credit_withdrawal_state_transition
             .check_version(version)
+        {
+            SimpleConsensusValidationResult::default()
+        } else {
+            SimpleConsensusValidationResult::new_with_error(
+                UnsupportedVersionError::new(
+                    version,
+                    self.state_transitions
+                        .identity_credit_withdrawal_state_transition
+                        .min_version,
+                    self.state_transitions
+                        .identity_credit_withdrawal_state_transition
+                        .max_version,
+                )
+                .into(),
+            )
+        }
     }
 
-    pub fn validate_contract_create_state_transition_version(&self, version: u16) -> bool {
-        self.state_transitions
+    pub fn validate_contract_create_state_transition_version(
+        &self,
+        version: u16,
+    ) -> SimpleConsensusValidationResult {
+        if self
+            .state_transitions
             .contract_create_state_transition
             .check_version(version)
+        {
+            SimpleConsensusValidationResult::default()
+        } else {
+            SimpleConsensusValidationResult::new_with_error(
+                UnsupportedVersionError::new(
+                    version,
+                    self.state_transitions
+                        .contract_create_state_transition
+                        .min_version,
+                    self.state_transitions
+                        .contract_create_state_transition
+                        .max_version,
+                )
+                .into(),
+            )
+        }
     }
 
-    pub fn validate_contract_update_state_transition_version(&self, version: u16) -> bool {
-        self.state_transitions
+    pub fn validate_contract_update_state_transition_version(
+        &self,
+        version: u16,
+    ) -> SimpleConsensusValidationResult {
+        if self
+            .state_transitions
             .contract_update_state_transition
             .check_version(version)
+        {
+            SimpleConsensusValidationResult::default()
+        } else {
+            SimpleConsensusValidationResult::new_with_error(
+                UnsupportedVersionError::new(
+                    version,
+                    self.state_transitions
+                        .contract_update_state_transition
+                        .min_version,
+                    self.state_transitions
+                        .contract_update_state_transition
+                        .max_version,
+                )
+                .into(),
+            )
+        }
     }
 }

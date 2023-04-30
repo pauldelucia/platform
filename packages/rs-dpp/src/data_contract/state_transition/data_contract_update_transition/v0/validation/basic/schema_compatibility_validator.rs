@@ -269,11 +269,11 @@ mod test {
 
     lazy_static! {
         static ref DATA_SCHEMA: JsonValue = serde_json::from_str(include_str!(
-            "./../../../../../tests/payloads/schema/data.json"
+            "./../../../../../../tests/payloads/schema/data.json"
         ))
         .unwrap();
         static ref DATA_SCHEMA_V2: JsonValue = serde_json::from_str(include_str!(
-            "./../../../../../tests/payloads/schema/data_v2.json"
+            "./../../../../../../tests/payloads/schema/data_v2.json"
         ))
         .unwrap();
     }

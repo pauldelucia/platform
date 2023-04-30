@@ -20,8 +20,6 @@ fn setup_test() -> (Vec<Value>, PublicKeysValidator<NativeBlsModule>) {
 }
 
 pub mod id {
-    use jsonschema::error::ValidationErrorKind;
-
     use crate::assert_basic_consensus_errors;
     use crate::consensus::basic::BasicError;
     use crate::errors::consensus::ConsensusError;
@@ -130,8 +128,6 @@ pub mod key_type {
 }
 
 pub mod data {
-    use jsonschema::error::ValidationErrorKind;
-
     use crate::assert_basic_consensus_errors;
     use crate::consensus::basic::BasicError;
     use crate::errors::consensus::ConsensusError;

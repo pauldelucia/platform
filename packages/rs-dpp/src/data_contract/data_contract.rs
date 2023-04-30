@@ -3,14 +3,13 @@ use bincode::de::{BorrowDecoder, Decoder};
 use bincode::enc::Encoder;
 use bincode::error::{DecodeError, EncodeError};
 use bincode::{BorrowDecode, Decode, Encode};
-use futures::StreamExt;
 use std::collections::{BTreeMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 
-use crate::serialization_traits::{PlatformDeserializable, PlatformSerializable, ValueConvertible};
+use crate::serialization_traits::{PlatformDeserializable, PlatformSerializable};
 use itertools::{Either, Itertools};
 use platform_value::btreemap_extensions::{BTreeValueMapHelper, BTreeValueRemoveFromMapHelper};
-use platform_value::{platform_value, Bytes32, Identifier};
+use platform_value::{Bytes32, Identifier};
 use platform_value::{ReplacementType, Value, ValueMapHelper};
 use serde::de::Error;
 use serde::{Deserialize, Serialize};
@@ -83,7 +82,7 @@ impl Convertible for DataContract {
     /// Returns Data Contract as a Buffer
     #[cfg(feature = "cbor")]
     fn to_cbor_buffer(&self) -> Result<Vec<u8>, ProtocolError> {
-        let protocol_version = self.protocol_version;
+        let protocol_version = self.data_contract_protocol_version;
 
         let mut object = self.to_object()?;
         object.remove(property_names::PROTOCOL_VERSION)?;
@@ -128,7 +127,7 @@ impl Convertible for DataContract {
 pub struct DataContract {
     /// The version of the protocol this contract adheres to.
     #[serde(default = "default_protocol_version")]
-    pub protocol_version: u32,
+    pub data_contract_protocol_version: u32,
 
     /// A unique identifier for the data contract.
     #[serde(rename = "$id")]
@@ -238,7 +237,7 @@ pub struct DataContractInner {
 impl From<DataContract> for DataContractInner {
     fn from(value: DataContract) -> Self {
         let DataContract {
-            protocol_version,
+            data_contract_protocol_version: protocol_version,
             id,
             config,
             schema,
@@ -308,7 +307,7 @@ impl TryFrom<DataContractInner> for DataContract {
             .collect::<Result<BTreeMap<DocumentName, BTreeMap<PropertyPath, JsonValue>>, ProtocolError>>()?;
 
         let data_contract = DataContract {
-            protocol_version,
+            data_contract_protocol_version: protocol_version,
             id,
             schema,
             version,
@@ -381,7 +380,7 @@ impl DataContract {
             .collect();
 
         let data_contract = DataContract {
-            protocol_version,
+            data_contract_protocol_version: protocol_version,
             id,
             schema: data_contract_map
                 .remove_string(property_names::SCHEMA)
@@ -830,8 +829,8 @@ mod test {
             .expect("data contract should be created from bytes");
 
         assert_eq!(
-            data_contract.protocol_version,
-            data_contract_restored.protocol_version
+            data_contract.data_contract_protocol_version,
+            data_contract_restored.data_contract_protocol_version
         );
         assert_eq!(data_contract.schema, data_contract_restored.schema);
         assert_eq!(data_contract.version, data_contract_restored.version);
@@ -853,7 +852,7 @@ mod test {
     fn conversion_to_cbor_buffer_from_cbor_buffer_high_version() {
         init();
         let mut data_contract = get_data_contract_fixture(None);
-        data_contract.protocol_version = 10000;
+        data_contract.data_contract_protocol_version = 10000;
 
         let data_contract_bytes = data_contract
             .to_cbor_buffer()
@@ -863,8 +862,8 @@ mod test {
             .expect("data contract should be created from bytes");
 
         assert_eq!(
-            data_contract.protocol_version,
-            data_contract_restored.protocol_version
+            data_contract.data_contract_protocol_version,
+            data_contract_restored.data_contract_protocol_version
         );
         assert_eq!(data_contract.schema, data_contract_restored.schema);
         assert_eq!(data_contract.version, data_contract_restored.version);
@@ -904,7 +903,10 @@ mod test {
         let data_contract_restored = DataContract::from_cbor_buffer(&high_protocol_version_bytes)
             .expect("data contract should be created from bytes");
 
-        assert_eq!(u32::MAX, data_contract_restored.protocol_version);
+        assert_eq!(
+            u32::MAX,
+            data_contract_restored.data_contract_protocol_version
+        );
         assert_eq!(data_contract.schema, data_contract_restored.schema);
         assert_eq!(data_contract.version, data_contract_restored.version);
         assert_eq!(data_contract.id, data_contract_restored.id);
@@ -926,7 +928,7 @@ mod test {
 
         let string_contract = get_data_from_file("src/tests/payloads/contract_example.json")?;
         let contract = DataContract::try_from(string_contract.as_str())?;
-        assert_eq!(contract.protocol_version, 0);
+        assert_eq!(contract.data_contract_protocol_version, 0);
         assert_eq!(
             contract.schema,
             "https://schema.dash.org/dpp-0-4-0/meta/data-contract"
@@ -987,7 +989,7 @@ mod test {
         }
 
         let data_contract_from_raw = DataContract::try_from(raw_contract)?;
-        assert_eq!(data_contract_from_raw.protocol_version, 0);
+        assert_eq!(data_contract_from_raw.data_contract_protocol_version, 0);
         assert_eq!(
             data_contract_from_raw.schema,
             "https://schema.dash.org/dpp-0-4-0/meta/data-contract"
@@ -1017,7 +1019,7 @@ mod test {
         let data_contract = DataContract::from_cbor_buffer(data_contract_cbor).unwrap();
 
         assert_eq!(data_contract.version, 1);
-        assert_eq!(data_contract.protocol_version, 1);
+        assert_eq!(data_contract.data_contract_protocol_version, 1);
         assert_eq!(
             data_contract.schema,
             "https://schema.dash.org/dpp-0-4-0/meta/data-contract"

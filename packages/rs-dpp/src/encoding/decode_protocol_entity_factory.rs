@@ -1,17 +1,11 @@
-use anyhow::anyhow;
-#[cfg(feature = "cbor")]
-use ciborium::value::Value as CborValue;
-use std::convert::TryInto;
-
 use platform_value::Value;
 
 use crate::consensus::basic::decode::SerializedObjectParsingError;
 use crate::consensus::basic::BasicError;
 use crate::serialization_traits::{PlatformDeserializable, ValueConvertible};
-use crate::state_transition::{StateTransition, StateTransitionConvert};
 use crate::util::deserializer;
 use crate::util::deserializer::SplitProtocolVersionOutcome;
-use crate::{errors::consensus::ConsensusError, errors::ProtocolError, Convertible};
+use crate::{errors::consensus::ConsensusError, errors::ProtocolError};
 
 #[derive(Default, Clone, Copy)]
 pub struct DecodeProtocolEntity {}

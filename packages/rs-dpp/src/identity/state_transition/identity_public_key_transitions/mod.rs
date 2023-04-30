@@ -16,7 +16,6 @@ use serde_json::Value as JsonValue;
 use crate::consensus::signature::{
     BasicBLSError, BasicECDSAError, SignatureError, SignatureShouldNotBePresentError,
 };
-use crate::consensus::ConsensusError;
 use crate::errors::ProtocolError;
 use crate::identity::signer::Signer;
 use crate::platform_serialization::{PlatformDeserialize, PlatformSerialize};

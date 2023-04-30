@@ -2,6 +2,7 @@ use dpp::consensus::basic::data_contract::InvalidDataContractVersionError;
 use dpp::consensus::basic::document::DataContractNotPresentError;
 use dpp::data_contract::state_transition::data_contract_update_transition::validation::basic::DATA_CONTRACT_UPDATE_SCHEMA_VALIDATOR;
 use dpp::identity::PartialIdentity;
+use dpp::version::PlatformVersion;
 use dpp::{
     consensus::basic::{
         data_contract::{
@@ -27,7 +28,7 @@ use dpp::{
     Convertible, ProtocolError,
 };
 use dpp::{
-    data_contract::state_transition::data_contract_update_transition::DataContractUpdateTransitionAction,
+    data_contract::state_transition::data_contract_update_transition::DataContractUpdateTransitionActionV0,
     validation::{ConsensusValidationResult, SimpleConsensusValidationResult},
 };
 use drive::drive::Drive;
@@ -46,21 +47,18 @@ impl StateTransitionValidation for DataContractUpdateTransition {
         &self,
         _drive: &Drive,
         _tx: TransactionArg,
+        active_protocol_version: u32,
     ) -> Result<SimpleConsensusValidationResult, Error> {
-        let result = validate_schema(&DATA_CONTRACT_UPDATE_SCHEMA_VALIDATOR, self);
+        let result = PlatformVersion::get(active_protocol_version)?
+            .validate_contract_update_state_transition_version(self.state_transition_version());
         if !result.is_valid() {
             return Ok(result);
         }
 
-        // Validate protocol version
-        //todo: redo versioning
-        // let protocol_version_validator = ProtocolVersionValidator::default();
-        // let result = protocol_version_validator
-        //     .validate(self.protocol_version)
-        //     .expect("TODO: again, how this will ever fail, why do we even need a validator trait");
-        // if !result.is_valid() {
-        //     return Ok(result);
-        // }
+        let result = validate_schema(&DATA_CONTRACT_UPDATE_SCHEMA_VALIDATOR, self);
+        if !result.is_valid() {
+            return Ok(result);
+        }
 
         self.data_contract
             .validate_structure()
@@ -213,7 +211,7 @@ impl StateTransitionValidation for DataContractUpdateTransition {
         }
 
         let action: StateTransitionAction =
-            Into::<DataContractUpdateTransitionAction>::into(self).into();
+            Into::<DataContractUpdateTransitionActionV0>::into(self).into();
         Ok(action.into())
     }
 }

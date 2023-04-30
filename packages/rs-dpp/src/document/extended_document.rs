@@ -15,21 +15,17 @@ use integer_encoding::VarInt;
 use crate::data_contract::document_type::document_type::PROTOCOL_VERSION;
 use crate::data_contract::document_type::DocumentType;
 use crate::document::Document;
+use crate::serialization_traits::PlatformDeserializable;
 use crate::serialization_traits::ValueConvertible;
-use crate::serialization_traits::{PlatformDeserializable, PlatformSerializable};
-use bincode::{config, Decode, Encode};
-use platform_serialization::{PlatformDeserialize, PlatformSerialize};
 use platform_value::btreemap_extensions::BTreeValueMapInsertionPathHelper;
 use platform_value::btreemap_extensions::BTreeValueMapPathHelper;
 use platform_value::btreemap_extensions::BTreeValueMapReplacementPathHelper;
 use platform_value::btreemap_extensions::BTreeValueRemoveFromMapHelper;
 use platform_value::converter::serde_json::BTreeValueJsonConverter;
 use platform_value::{Bytes32, ReplacementType, Value};
-use platform_value_convertible::PlatformValueConvert;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use std::collections::{BTreeMap, HashSet};
-use std::convert::TryFrom;
 use std::convert::TryInto;
 
 pub mod property_names {

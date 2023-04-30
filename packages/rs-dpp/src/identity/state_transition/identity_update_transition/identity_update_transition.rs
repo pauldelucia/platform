@@ -400,19 +400,19 @@ impl StateTransitionConvert for IdentityUpdateTransition {
 
 impl StateTransitionLike for IdentityUpdateTransition {
     /// Returns ids of created identities
-    fn get_modified_data_ids(&self) -> Vec<Identifier> {
+    fn modified_data_ids(&self) -> Vec<Identifier> {
         vec![*self.get_identity_id()]
     }
 
-    fn get_protocol_version(&self) -> u32 {
+    fn state_transition_protocol_version(&self) -> u32 {
         self.protocol_version
     }
 
-    fn get_signature(&self) -> &BinaryData {
+    fn signature(&self) -> &BinaryData {
         &self.signature
     }
 
-    fn get_type(&self) -> StateTransitionType {
+    fn state_transition_type(&self) -> StateTransitionType {
         self.transition_type
     }
 

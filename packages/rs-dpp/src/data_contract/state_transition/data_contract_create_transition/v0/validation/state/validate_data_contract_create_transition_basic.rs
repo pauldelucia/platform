@@ -25,7 +25,7 @@ use crate::{
 
 lazy_static! {
     pub static ref DATA_CONTRACT_CREATE_SCHEMA: JsonValue = serde_json::from_str(include_str!(
-        "../../../../../schema/data_contract/stateTransition/dataContractCreate.json"
+        "../../../../../../schema/data_contract/stateTransition/dataContractCreate.json"
     ))
     .unwrap();
     pub static ref DATA_CONTRACT_CREATE_SCHEMA_VALIDATOR: JsonSchemaValidator =
@@ -88,8 +88,8 @@ fn validate_data_contract_create_transition_basic(
         return Ok(result);
     }
 
-    let protocol_version = match raw_state_transition
-        .get_integer(property_names::PROTOCOL_VERSION)
+    let state_transition_version = match raw_state_transition
+        .get_integer(property_names::STATE_TRANSITION_PROTOCOL_VERSION)
         .map_err(ProtocolError::ValueError)
     {
         Ok(v) => v,
@@ -100,7 +100,7 @@ fn validate_data_contract_create_transition_basic(
         }
     };
 
-    let result = protocol_validator.validate(&protocol_version)?;
+    let result = protocol_validator.validate(&state_transition_version)?;
     if !result.is_valid() {
         return Ok(result);
     }

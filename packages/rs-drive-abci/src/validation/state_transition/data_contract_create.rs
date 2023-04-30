@@ -19,6 +19,7 @@ use dpp::consensus::state::data_contract::data_contract_already_present_error::D
 use dpp::consensus::state::state_error::StateError;
 use dpp::state_transition::StateTransitionAction;
 use dpp::data_contract::state_transition::data_contract_create_transition::validation::state::validate_data_contract_create_transition_basic::DATA_CONTRACT_CREATE_SCHEMA_VALIDATOR;
+use dpp::version::{LATEST_PLATFORM_VERSION, LATEST_VERSION, PlatformVersion};
 use drive::grovedb::TransactionArg;
 use drive::drive::Drive;
 
@@ -35,34 +36,22 @@ impl StateTransitionValidation for DataContractCreateTransition {
         &self,
         _drive: &Drive,
         _tx: TransactionArg,
+        active_protocol_version: u32,
     ) -> Result<SimpleConsensusValidationResult, Error> {
+        let result = PlatformVersion::get(active_protocol_version)?
+            .validate_contract_create_state_transition_version(self.state_transition_version());
+        if !result.is_valid() {
+            return Ok(result);
+        }
+
         let result = validate_schema(&DATA_CONTRACT_CREATE_SCHEMA_VALIDATOR, self);
         if !result.is_valid() {
             return Ok(result);
         }
 
-        //todo: re-enable version validation
-        // // Validate protocol version
-        // let protocol_version_validator = ProtocolVersionValidator::default();
-        // let result = protocol_version_validator
-        //     .validate(self.protocol_version)
-        //     .expect("TODO: again, how this will ever fail, why do we even need a validator trait");
-        // if !result.is_valid() {
-        //     return Ok(result);
-        // }
-        //
-        // // Validate data contract
-        // let data_contract_validator =
-        //     DataContractValidator::new(Arc::new(protocol_version_validator)); // ffs
-        // let result = data_contract_validator
-        //     .validate(&(self.data_contract.to_cleaned_object().expect("TODO")))?;
-        // if !result.is_valid() {
-        //     return Ok(result);
-        // }
-
         // Validate data contract id
         let generated_id =
-            generate_data_contract_id(self.data_contract.owner_id, self.data_contract.entropy);
+            generate_data_contract_id(self.data_contract().owner_id, self.data_contract().entropy);
         if generated_id.as_slice() != self.data_contract.id.as_ref() {
             return Ok(SimpleConsensusValidationResult::new_with_error(
                 BasicError::InvalidDataContractIdError(InvalidDataContractIdError::new(

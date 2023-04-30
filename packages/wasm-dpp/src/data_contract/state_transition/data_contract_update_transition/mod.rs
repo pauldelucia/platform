@@ -96,7 +96,7 @@ impl DataContractUpdateTransitionWasm {
 
     #[wasm_bindgen(js_name=getType)]
     pub fn get_type(&self) -> u32 {
-        self.0.get_type() as u32
+        self.0.state_transition_type() as u32
     }
 
     #[wasm_bindgen(js_name=toJSON)]
