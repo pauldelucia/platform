@@ -155,6 +155,7 @@ mod test {
     use crate::serialization_traits::PlatformSerializable;
     use crate::serialization_traits::Signable;
     use crate::state_transition::errors::{PublicKeyMismatchError, WrongPublicKeyPurposeError};
+    use crate::version::FeatureVersion;
     use crate::{
         document::DocumentsBatchTransition,
         identity::{KeyID, Purpose, SecurityLevel},
@@ -221,7 +222,7 @@ mod test {
     }
 
     impl StateTransitionLike for ExampleStateTransition {
-        fn state_transition_protocol_version(&self) -> u32 {
+        fn state_transition_protocol_version(&self) -> FeatureVersion {
             1
         }
         fn state_transition_type(&self) -> StateTransitionType {

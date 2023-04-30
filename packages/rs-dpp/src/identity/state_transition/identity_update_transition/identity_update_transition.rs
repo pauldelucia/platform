@@ -16,6 +16,7 @@ use crate::identity::signer::Signer;
 use crate::identity::{Identity, IdentityPublicKey};
 
 use crate::serialization_traits::PlatformSerializable;
+use crate::version::FeatureVersion;
 use crate::{
     identity::{KeyID, SecurityLevel},
     prelude::{Identifier, Revision, TimestampMillis},
@@ -404,8 +405,8 @@ impl StateTransitionLike for IdentityUpdateTransition {
         vec![*self.get_identity_id()]
     }
 
-    fn state_transition_protocol_version(&self) -> u32 {
-        self.protocol_version
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
+        self.protocol_version as FeatureVersion
     }
 
     fn signature(&self) -> &BinaryData {

@@ -18,6 +18,7 @@ use serde::ser::SerializeMap;
 
 use crate::data_contract::state_transition::data_contract_update_transition::DataContractUpdateTransition;
 use crate::state_transition::StateTransition;
+use crate::version::FeatureVersion;
 use crate::{
     data_contract::DataContract,
     identity::KeyID,
@@ -187,7 +188,7 @@ impl StateTransitionLike for DataContractUpdateTransitionV0 {
         vec![self.data_contract.id]
     }
 
-    fn state_transition_protocol_version(&self) -> u32 {
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
         0
     }
     /// returns the type of State Transition

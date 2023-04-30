@@ -737,7 +737,7 @@ where
 
     fn create_basic_identity(id: [u8; 32]) -> Identity {
         Identity {
-            protocol_version: IDENTITY_PROTOCOL_VERSION,
+            feature_version: IDENTITY_PROTOCOL_VERSION,
             id: Identifier::new(id),
             revision: 1,
             balance: 0,

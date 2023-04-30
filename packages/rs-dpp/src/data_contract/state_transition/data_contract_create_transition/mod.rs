@@ -15,6 +15,7 @@ use crate::serialization_traits::{PlatformSerializable, Signable};
 use crate::state_transition::{
     StateTransitionConvert, StateTransitionIdentitySigned, StateTransitionLike, StateTransitionType,
 };
+use crate::version::FeatureVersion;
 use crate::{Convertible, ProtocolError};
 pub use action::DataContractCreateTransitionAction;
 use bincode::{config, Decode, Encode};
@@ -240,7 +241,7 @@ impl StateTransitionLike for DataContractCreateTransition {
         }
     }
 
-    fn state_transition_protocol_version(&self) -> u32 {
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
         match self {
             DataContractCreateTransition::V0(_) => 0,
         }
@@ -389,6 +390,7 @@ mod test {
     use crate::state_transition::StateTransitionType;
     use crate::tests::fixtures::get_data_contract_fixture;
     use crate::util::json_value::JsonValueExt;
+    use crate::version::LATEST_PLATFORM_VERSION;
     use crate::{version, Convertible};
 
     use super::*;
@@ -404,7 +406,11 @@ mod test {
         let state_transition = DataContractCreateTransition::from_raw_object(Value::from([
             (
                 property_names::STATE_TRANSITION_PROTOCOL_VERSION,
-                version::LATEST_VERSION.into(),
+                LATEST_PLATFORM_VERSION
+                    .state_transitions
+                    .contract_create_state_transition
+                    .default_current_version
+                    .into(),
             ),
             (property_names::ENTROPY, data_contract.entropy.into()),
             (
@@ -424,7 +430,10 @@ mod test {
     fn should_return_protocol_version() {
         let data = get_test_data();
         assert_eq!(
-            version::LATEST_VERSION,
+            LATEST_PLATFORM_VERSION
+                .state_transitions
+                .contract_create_state_transition
+                .default_current_version,
             data.state_transition.state_transition_protocol_version()
         )
     }

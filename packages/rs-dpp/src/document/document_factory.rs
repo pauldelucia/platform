@@ -16,6 +16,7 @@ use crate::document::document_transition::INITIAL_REVISION;
 use crate::document::Document;
 use crate::identity::TimestampMillis;
 use crate::util::entropy_generator::{DefaultEntropyGenerator, EntropyGenerator};
+use crate::version::LATEST_PLATFORM_VERSION;
 use crate::{
     data_contract::{errors::DataContractError, DataContract},
     encoding::decode_protocol_entity_factory::DecodeProtocolEntity,
@@ -181,7 +182,9 @@ where
         //         .validate(&json_value, &data_contract, document_type)?;
 
         let extended_document = ExtendedDocument {
-            protocol_version: self.protocol_version,
+            feature_version: LATEST_PLATFORM_VERSION
+                .extended_document
+                .default_current_version,
             document_type_name,
             data_contract_id: data_contract.id,
             document,
@@ -283,7 +286,7 @@ where
             .into()),
             Err(err) => Err(err),
             Ok((version, mut raw_document)) => {
-                raw_document.set_value(property_names::PROTOCOL_VERSION, Value::U32(version))?;
+                raw_document.set_value(property_names::FEATURE_VERSION, Value::U32(version))?;
                 self.create_from_object(raw_document, options).await
             }
         }

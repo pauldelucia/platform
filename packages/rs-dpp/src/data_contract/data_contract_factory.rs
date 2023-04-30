@@ -16,6 +16,7 @@ use crate::consensus::basic::BasicError;
 use crate::consensus::ConsensusError;
 use crate::serialization_traits::PlatformDeserializable;
 use crate::util::entropy_generator::{DefaultEntropyGenerator, EntropyGenerator};
+use crate::version::LATEST_PLATFORM_VERSION;
 use crate::{
     data_contract::{self, generate_data_contract_id},
     errors::ProtocolError,
@@ -194,7 +195,12 @@ impl DataContractFactory {
         let raw_object = BTreeMap::from([
             (
                 st_prop::STATE_TRANSITION_PROTOCOL_VERSION.to_string(),
-                Value::U32(self.protocol_version), //todo
+                Value::U16(
+                    LATEST_PLATFORM_VERSION
+                        .state_transitions
+                        .contract_update_state_transition
+                        .default_current_version,
+                ),
             ),
             (
                 st_prop::DATA_CONTRACT.to_string(),

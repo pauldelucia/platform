@@ -12,6 +12,7 @@ use crate::document::Document;
 use crate::identity::TimestampMillis;
 use crate::prelude::Identifier;
 use crate::prelude::{ExtendedDocument, Revision};
+use crate::version::LATEST_PLATFORM_VERSION;
 use crate::{data_contract::DataContract, errors::ProtocolError};
 
 use super::{document_base_transition::DocumentBaseTransition, DocumentTransitionObjectLike};
@@ -58,7 +59,9 @@ impl DocumentReplaceTransition {
         owner_id: Identifier,
     ) -> Result<ExtendedDocument, ProtocolError> {
         Ok(ExtendedDocument {
-            protocol_version: PROTOCOL_VERSION,
+            feature_version: LATEST_PLATFORM_VERSION
+                .extended_document
+                .default_current_version,
             document_type_name: self.base.document_type_name.clone(),
             data_contract_id: self.base.data_contract_id,
             document: self.to_document_for_dry_run(owner_id)?,

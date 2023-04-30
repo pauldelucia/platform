@@ -8,13 +8,14 @@ mod document;
 pub mod document_facade;
 pub mod document_factory;
 mod document_patch;
-pub mod document_validator;
 pub mod errors;
 pub mod extended_document;
 pub mod fetch_and_validate_data_contract;
 pub mod generate_document_id;
-pub mod serialize;
 pub mod state_transition;
+mod v0;
+
+pub use v0::*;
 
 pub use document::Document;
 pub use extended_document::property_names as extended_document_property_names;

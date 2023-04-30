@@ -22,7 +22,7 @@ use crate::prelude::{DocumentTransition, Identifier};
 #[cfg(feature = "cbor")]
 use crate::util::cbor_value::{CborCanonicalMap, FieldType, ReplacePaths, ValuesCollection};
 use crate::util::json_value::JsonValueExt;
-use crate::version::LATEST_VERSION;
+use crate::version::{FeatureVersion, LATEST_VERSION};
 use crate::ProtocolError;
 use crate::{
     identity::{KeyID, SecurityLevel},
@@ -85,7 +85,7 @@ const EMPTY_VEC: Vec<u8> = vec![];
 #[serde(rename_all = "camelCase")]
 #[platform_error_type(ProtocolError)]
 pub struct DocumentsBatchTransition {
-    pub protocol_version: u32,
+    pub feature_version: FeatureVersion,
     #[serde(rename = "type")]
     pub transition_type: StateTransitionType,
     pub owner_id: Identifier,
@@ -105,7 +105,7 @@ pub struct DocumentsBatchTransition {
 impl std::default::Default for DocumentsBatchTransition {
     fn default() -> Self {
         DocumentsBatchTransition {
-            protocol_version: Default::default(),
+            feature_version: Default::default(),
             transition_type: StateTransitionType::DocumentsBatch,
             owner_id: Identifier::default(),
             transitions: vec![],
@@ -132,10 +132,10 @@ impl DocumentsBatchTransition {
         };
 
         let mut batch_transitions = DocumentsBatchTransition {
-            protocol_version: json_value
+            feature_version: json_value
                 .get_u64(property_names::PROTOCOL_VERSION)
                 // js-dpp allows `protocolVersion` to be undefined
-                .unwrap_or(LATEST_VERSION as u64) as u32,
+                .unwrap_or(LATEST_VERSION as u64) as u16,
             signature,
             signature_public_key_id: json_value
                 .get_u64(property_names::SIGNATURE_PUBLIC_KEY_ID)
@@ -197,10 +197,10 @@ impl DocumentsBatchTransition {
         data_contracts: Vec<DataContract>,
     ) -> Result<Self, ProtocolError> {
         let mut batch_transitions = DocumentsBatchTransition {
-            protocol_version: map
+            feature_version: map
                 .get_integer(property_names::PROTOCOL_VERSION)
                 // js-dpp allows `protocolVersion` to be undefined
-                .unwrap_or(LATEST_VERSION as u64) as u32,
+                .unwrap_or(LATEST_VERSION as u64) as u16,
             signature: map
                 .get_optional_binary_data(property_names::SIGNATURE)
                 .map_err(ProtocolError::ValueError)?,
@@ -343,7 +343,7 @@ impl DocumentsBatchTransition {
         let mut map = BTreeMap::new();
         map.insert(
             property_names::PROTOCOL_VERSION.to_string(),
-            Value::U32(self.protocol_version),
+            Value::U16(self.feature_version),
         );
         map.insert(
             property_names::TRANSITION_TYPE.to_string(),
@@ -423,7 +423,7 @@ impl StateTransitionConvert for DocumentsBatchTransition {
 
     #[cfg(feature = "cbor")]
     fn to_cbor_buffer(&self, skip_signature: bool) -> Result<Vec<u8>, ProtocolError> {
-        let mut result_buf = self.protocol_version.encode_var_vec();
+        let mut result_buf = self.feature_version.encode_var_vec();
         let value: CborValue = self.to_object(skip_signature)?.try_into()?;
 
         let map = CborValue::serialized(&value)
@@ -517,8 +517,8 @@ impl StateTransitionLike for DocumentsBatchTransition {
         self.transitions.iter().map(|t| t.base().id).collect()
     }
 
-    fn state_transition_protocol_version(&self) -> u32 {
-        self.protocol_version
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
+        self.feature_version
     }
 
     fn signature(&self) -> &BinaryData {

@@ -29,6 +29,7 @@ pub mod apply_data_contract_update_transition_factory;
 mod v0;
 mod v0_action;
 
+use crate::version::FeatureVersion;
 pub use action::DataContractUpdateTransitionAction;
 pub use v0::*;
 pub use v0_action::DataContractUpdateTransitionActionV0;
@@ -226,7 +227,7 @@ impl StateTransitionLike for DataContractUpdateTransition {
         }
     }
 
-    fn state_transition_protocol_version(&self) -> u32 {
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
         match self {
             DataContractUpdateTransition::V0(_) => 0,
         }
@@ -354,6 +355,7 @@ mod test {
     use crate::data_contract::state_transition::data_contract_update_transition::property_names::STATE_TRANSITION_PROTOCOL_VERSION;
     use crate::data_contract::state_transition::property_names::TRANSITION_TYPE;
     use crate::tests::fixtures::get_data_contract_fixture;
+    use crate::version::{LATEST_PLATFORM_VERSION, PLATFORM_VERSIONS};
     use crate::{version, Convertible};
 
     use super::*;
@@ -369,7 +371,12 @@ mod test {
         let value_map = BTreeMap::from([
             (
                 STATE_TRANSITION_PROTOCOL_VERSION.to_string(),
-                Value::U32(version::LATEST_VERSION),
+                Value::U16(
+                    LATEST_PLATFORM_VERSION
+                        .state_transitions
+                        .contract_create_state_transition
+                        .default_current_version,
+                ),
             ),
             (
                 DATA_CONTRACT.to_string(),
@@ -390,7 +397,10 @@ mod test {
     fn should_return_protocol_version() {
         let data = get_test_data();
         assert_eq!(
-            version::LATEST_VERSION,
+            LATEST_PLATFORM_VERSION
+                .state_transitions
+                .contract_update_state_transition
+                .default_current_version,
             data.state_transition.state_transition_protocol_version()
         )
     }

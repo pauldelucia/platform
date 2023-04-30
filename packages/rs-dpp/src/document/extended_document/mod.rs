@@ -1,3 +1,5 @@
+mod v0;
+
 use crate::data_contract::DataContract;
 use crate::metadata::Metadata;
 use crate::prelude::Identifier;
@@ -17,6 +19,7 @@ use crate::data_contract::document_type::DocumentType;
 use crate::document::Document;
 use crate::serialization_traits::PlatformDeserializable;
 use crate::serialization_traits::ValueConvertible;
+use crate::version::{FeatureVersion, LATEST_PLATFORM_VERSION};
 use platform_value::btreemap_extensions::BTreeValueMapInsertionPathHelper;
 use platform_value::btreemap_extensions::BTreeValueMapPathHelper;
 use platform_value::btreemap_extensions::BTreeValueMapReplacementPathHelper;
@@ -29,7 +32,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
 
 pub mod property_names {
-    pub const PROTOCOL_VERSION: &str = "$protocolVersion";
+    pub const FEATURE_VERSION: &str = "$version";
     pub const ID: &str = "$id";
     pub const DOCUMENT_TYPE: &str = "$type";
     pub const REVISION: &str = "$revision";
@@ -48,8 +51,8 @@ pub const IDENTIFIER_FIELDS: [&str; 3] = [
 /// The document object represents the data provided by the platform in response to a query.
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ExtendedDocument {
-    #[serde(rename = "$protocolVersion")]
-    pub protocol_version: u32,
+    #[serde(rename = "$version")]
+    pub feature_version: FeatureVersion,
     #[serde(rename = "$type")]
     pub document_type_name: String,
     #[serde(rename = "$dataContractId")]
@@ -125,10 +128,10 @@ impl ExtendedDocument {
         document: Document,
         data_contract: DataContract,
         document_type_name: String,
-        protocol_version: ProtocolVersion,
+        feature_version: FeatureVersion,
     ) -> Self {
         Self {
-            protocol_version,
+            feature_version,
             document_type_name,
             data_contract_id: data_contract.id,
             document,
@@ -172,10 +175,14 @@ impl ExtendedDocument {
         };
 
         // if the protocol version is not set, use the current protocol version
-        extended_document.protocol_version = properties
-            .remove_optional_integer(property_names::PROTOCOL_VERSION)
+        extended_document.feature_version = properties
+            .remove_optional_integer(property_names::FEATURE_VERSION)
             .map_err(ProtocolError::ValueError)?
-            .unwrap_or(PROTOCOL_VERSION);
+            .unwrap_or(
+                LATEST_PLATFORM_VERSION
+                    .extended_document
+                    .default_current_version,
+            );
         extended_document.data_contract_id = Identifier::new(
             properties
                 .remove_optional_hash256_bytes(property_names::DATA_CONTRACT_ID)?
@@ -209,10 +216,14 @@ impl ExtendedDocument {
         };
 
         // if the protocol version is not set, use the current protocol version
-        extended_document.protocol_version = properties
-            .remove_optional_integer(property_names::PROTOCOL_VERSION)
+        extended_document.feature_version = properties
+            .remove_optional_integer(property_names::FEATURE_VERSION)
             .map_err(ProtocolError::ValueError)?
-            .unwrap_or(PROTOCOL_VERSION);
+            .unwrap_or(
+                LATEST_PLATFORM_VERSION
+                    .extended_document
+                    .default_current_version,
+            );
         extended_document.data_contract_id = properties
             .remove_optional_identifier(property_names::DATA_CONTRACT_ID)?
             .unwrap_or(extended_document.data_contract.id);
@@ -233,8 +244,8 @@ impl ExtendedDocument {
         let mut value = self.document.to_json()?;
         let value_mut = value.as_object_mut().unwrap();
         value_mut.insert(
-            property_names::PROTOCOL_VERSION.to_string(),
-            JsonValue::Number(self.protocol_version.into()),
+            property_names::FEATURE_VERSION.to_string(),
+            JsonValue::Number(self.feature_version.into()),
         );
         value_mut.insert(
             property_names::DOCUMENT_TYPE.to_string(),
@@ -251,8 +262,8 @@ impl ExtendedDocument {
         let mut value = self.document.to_json()?;
         let value_mut = value.as_object_mut().unwrap();
         value_mut.insert(
-            property_names::PROTOCOL_VERSION.to_string(),
-            JsonValue::Number(self.protocol_version.into()),
+            property_names::FEATURE_VERSION.to_string(),
+            JsonValue::Number(self.feature_version.into()),
         );
         value_mut.insert(
             property_names::DOCUMENT_TYPE.to_string(),
@@ -290,7 +301,7 @@ impl ExtendedDocument {
 
         let document = Document::from_map(document_map, None, None)?;
         Ok(ExtendedDocument {
-            protocol_version,
+            feature_version: protocol_version as u16,
             document_type_name,
             data_contract_id,
             document,
@@ -301,8 +312,8 @@ impl ExtendedDocument {
     pub fn to_map_value(&self) -> Result<BTreeMap<String, Value>, ProtocolError> {
         let mut object = self.document.to_map_value()?;
         object.insert(
-            property_names::PROTOCOL_VERSION.to_string(),
-            Value::U32(self.protocol_version),
+            property_names::FEATURE_VERSION.to_string(),
+            self.feature_version.into(),
         );
         object.insert(
             property_names::DOCUMENT_TYPE.to_string(),
@@ -317,7 +328,7 @@ impl ExtendedDocument {
 
     pub fn into_map_value(self) -> Result<BTreeMap<String, Value>, ProtocolError> {
         let ExtendedDocument {
-            protocol_version,
+            feature_version: protocol_version,
             document_type_name,
             data_contract_id,
             document,
@@ -326,8 +337,8 @@ impl ExtendedDocument {
 
         let mut object = document.into_map_value()?;
         object.insert(
-            property_names::PROTOCOL_VERSION.to_string(),
-            Value::U32(protocol_version),
+            property_names::FEATURE_VERSION.to_string(),
+            protocol_version.into(),
         );
         object.insert(
             property_names::DOCUMENT_TYPE.to_string(),
@@ -356,7 +367,7 @@ impl ExtendedDocument {
 
     #[cfg(feature = "cbor")]
     pub fn to_cbor_buffer(&self) -> Result<Vec<u8>, ProtocolError> {
-        let mut result_buf = self.protocol_version.encode_var_vec();
+        let mut result_buf = self.feature_version.encode_var_vec();
 
         let mut cbor_value = self.document.to_cbor_value()?;
         let value_mut = cbor_value.as_map_mut().unwrap();
@@ -545,7 +556,7 @@ mod test {
         let document_json = get_data_from_file("src/tests/payloads/document_dpns.json")?;
         let doc = ExtendedDocument::from_json_string(&document_json, dpns_contract)?;
         assert_eq!(doc.document_type_name, "domain");
-        assert_eq!(doc.protocol_version, 0);
+        assert_eq!(doc.feature_version, 0);
         assert_eq!(
             doc.id().to_buffer(),
             Identifier::from_string(
@@ -657,7 +668,7 @@ mod test {
 
         let document = ExtendedDocument::from_cbor_buffer(document_cbor)?;
 
-        assert_eq!(document.protocol_version, 1);
+        assert_eq!(document.feature_version, 1);
         assert_eq!(
             document.id().to_buffer().to_vec(),
             vec![

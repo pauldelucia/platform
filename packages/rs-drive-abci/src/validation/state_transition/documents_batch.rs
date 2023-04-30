@@ -44,7 +44,7 @@ impl StateTransitionValidation for DocumentsBatchTransition {
             return Ok(result);
         }
 
-        let result = validate_protocol_version(self.protocol_version);
+        let result = validate_protocol_version(self.feature_version);
         if !result.is_valid() {
             return Ok(result);
         }

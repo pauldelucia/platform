@@ -42,6 +42,7 @@ mod state_transition_action;
 
 use crate::serialization_traits::{PlatformDeserializable, Signable};
 use crate::util::hash;
+use crate::version::FeatureVersion;
 pub use state_transition_action::StateTransitionAction;
 macro_rules! call_method {
     ($state_transition:expr, $method:ident, $args:tt ) => {
@@ -176,7 +177,7 @@ impl Signable for StateTransition {
 }
 
 impl StateTransitionLike for StateTransition {
-    fn state_transition_protocol_version(&self) -> u32 {
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
         call_method!(self, state_transition_protocol_version)
     }
     /// returns the type of State Transition

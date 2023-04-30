@@ -14,6 +14,7 @@ use crate::identity::TimestampMillis;
 use crate::prelude::Revision;
 
 use crate::data_contract::document_type::document_type::PROTOCOL_VERSION;
+use crate::version::LATEST_PLATFORM_VERSION;
 use crate::{data_contract::DataContract, errors::ProtocolError};
 
 use super::INITIAL_REVISION;
@@ -73,7 +74,9 @@ impl DocumentCreateTransition {
         owner_id: Identifier,
     ) -> Result<ExtendedDocument, ProtocolError> {
         Ok(ExtendedDocument {
-            protocol_version: PROTOCOL_VERSION,
+            feature_version: LATEST_PLATFORM_VERSION
+                .extended_document
+                .default_current_version,
             document_type_name: self.base.document_type_name.clone(),
             data_contract_id: self.base.data_contract_id,
             document: self.to_document(owner_id)?,

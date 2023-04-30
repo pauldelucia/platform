@@ -31,6 +31,7 @@ pub mod validation;
 use crate::data_contract::state_transition::data_contract_create_transition::DataContractCreateTransition;
 use crate::state_transition::StateTransition;
 use crate::state_transition::StateTransitionType::DataContractCreate;
+use crate::version::FeatureVersion;
 
 #[derive(
     Debug,
@@ -181,7 +182,7 @@ impl StateTransitionLike for DataContractCreateTransitionV0 {
         vec![self.data_contract.id]
     }
 
-    fn state_transition_protocol_version(&self) -> u32 {
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
         0
     }
     /// returns the type of State Transition

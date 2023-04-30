@@ -8,7 +8,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::convert::TryInto;
 
 use crate::contracts::withdrawals_contract::property_names::OUTPUT_SCRIPT;
-use crate::version::LATEST_VERSION;
+use crate::version::{FeatureVersion, LATEST_VERSION};
 use crate::{
     identity::{core_script::CoreScript, KeyID},
     prelude::{Identifier, Revision},
@@ -156,8 +156,8 @@ impl StateTransitionLike for IdentityCreditWithdrawalTransition {
         vec![self.identity_id]
     }
 
-    fn state_transition_protocol_version(&self) -> u32 {
-        self.protocol_version
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
+        self.protocol_version as FeatureVersion
     }
 
     /// returns the type of State Transition

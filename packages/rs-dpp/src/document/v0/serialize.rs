@@ -13,6 +13,7 @@ use crate::util::deserializer;
 use crate::util::deserializer::SplitProtocolVersionOutcome;
 use crate::ProtocolError;
 
+use crate::document::v0::DocumentV0;
 use byteorder::{BigEndian, ReadBytesExt};
 #[cfg(feature = "cbor")]
 use ciborium::Value as CborValue;
@@ -74,7 +75,7 @@ impl TryFrom<Document> for DocumentForCbor {
     }
 }
 
-impl Document {
+impl DocumentV0 {
     /// Serializes the document.
     ///
     /// The serialization of a document follows the pattern:

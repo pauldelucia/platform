@@ -221,6 +221,7 @@ mod test {
     use crate::serialization_traits::PlatformDeserializable;
     use crate::serialization_traits::PlatformSerializable;
     use crate::serialization_traits::Signable;
+    use crate::version::FeatureVersion;
     use bincode::{config, Decode, Encode};
     use platform_serialization::{PlatformDeserialize, PlatformSerialize, PlatformSignable};
 
@@ -271,7 +272,7 @@ mod test {
     }
 
     impl StateTransitionLike for ExampleStateTransition {
-        fn state_transition_protocol_version(&self) -> u32 {
+        fn state_transition_protocol_version(&self) -> FeatureVersion {
             1
         }
         fn state_transition_type(&self) -> StateTransitionType {

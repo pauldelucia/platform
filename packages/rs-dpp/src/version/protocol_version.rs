@@ -40,7 +40,10 @@ pub struct DriveStructureVersion {
 #[derive(Clone, Copy, Debug)]
 pub struct PlatformVersion {
     pub protocol_version: u32,
+    pub document: FeatureVersionBounds,
+    pub extended_document: FeatureVersionBounds,
     pub contract: FeatureVersionBounds,
+    pub identity: FeatureVersionBounds,
     pub proofs: FeatureVersionBounds,
     pub costs: FeatureVersionBounds,
     pub state_transitions: StateTransitionVersion,

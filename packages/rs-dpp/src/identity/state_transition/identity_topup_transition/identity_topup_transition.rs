@@ -15,7 +15,8 @@ use crate::prelude::Identifier;
 
 use crate::serialization_traits::PlatformSerializable;
 use crate::state_transition::{StateTransitionConvert, StateTransitionLike, StateTransitionType};
-use crate::version::LATEST_VERSION;
+use crate::util::deserializer::ProtocolVersion;
+use crate::version::{FeatureVersion, LATEST_VERSION};
 use crate::{BlsModule, NonConsensusError, ProtocolError};
 use platform_serialization::{PlatformDeserialize, PlatformSerialize};
 
@@ -77,7 +78,7 @@ impl IdentityTopUpTransition {
             transition_type: StateTransitionType::IdentityTopUp,
             asset_lock_proof,
             identity_id: identity.id,
-            protocol_version: identity.protocol_version,
+            protocol_version: identity.feature_version as ProtocolVersion,
             signature: Default::default(),
         };
 
@@ -204,8 +205,8 @@ impl StateTransitionConvert for IdentityTopUpTransition {
 }
 
 impl StateTransitionLike for IdentityTopUpTransition {
-    fn state_transition_protocol_version(&self) -> u32 {
-        self.protocol_version
+    fn state_transition_protocol_version(&self) -> FeatureVersion {
+        self.protocol_version as FeatureVersion
     }
     /// returns the type of State Transition
     fn state_transition_type(&self) -> StateTransitionType {

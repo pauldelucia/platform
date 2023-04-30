@@ -16,6 +16,7 @@ use crate::state_transition::errors::{
 };
 #[cfg(feature = "cbor")]
 use crate::util::cbor_serializer;
+use crate::version::FeatureVersion;
 use crate::{
     identity::KeyType,
     prelude::{Identifier, ProtocolError},
@@ -48,7 +49,7 @@ pub trait StateTransitionLike:
     StateTransitionConvert + Clone + Debug + Into<StateTransition> + Signable
 {
     /// returns the protocol version
-    fn state_transition_protocol_version(&self) -> u32;
+    fn state_transition_protocol_version(&self) -> FeatureVersion;
     /// returns the type of State Transition
     fn state_transition_type(&self) -> StateTransitionType;
     /// returns the signature as a byte-array
