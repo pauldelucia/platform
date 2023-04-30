@@ -1,6 +1,6 @@
 use crate::consensus::basic::unsupported_version_error::UnsupportedVersionError;
 use crate::validation::SimpleConsensusValidationResult;
-use crate::version::v0::PLATFORM_V0;
+use crate::version::v0::PLATFORM_V1;
 use crate::ProtocolError;
 
 pub type FeatureVersion = u16;
@@ -47,17 +47,23 @@ pub struct PlatformVersion {
     pub drive_structure: DriveStructureVersion,
 }
 
-pub const PLATFORM_VERSIONS: &'static [PlatformVersion] = &[PLATFORM_V0];
+pub const PLATFORM_VERSIONS: &'static [PlatformVersion] = &[PLATFORM_V1];
 
-pub const LATEST_PLATFORM_VERSION: &'static PlatformVersion = &PLATFORM_V0;
+pub const LATEST_PLATFORM_VERSION: &'static PlatformVersion = &PLATFORM_V1;
 
 impl PlatformVersion {
     pub fn get<'a>(version: u32) -> Result<&'a Self, ProtocolError> {
-        PLATFORM_VERSIONS
-            .get(version as usize)
-            .ok_or(ProtocolError::UnknownProtocolVersionError(format!(
+        if version > 0 {
+            PLATFORM_VERSIONS.get(version as usize - 1).ok_or(
+                ProtocolError::UnknownProtocolVersionError(format!(
+                    "no platform version {version}"
+                )),
+            )
+        } else {
+            Err(ProtocolError::UnknownProtocolVersionError(format!(
                 "no platform version {version}"
             )))
+        }
     }
 
     pub fn validate_contract_version(&self, version: u16) -> SimpleConsensusValidationResult {

@@ -2,7 +2,7 @@ use crate::version::protocol_version::{
     DriveStructureVersion, FeatureVersionBounds, PlatformVersion, StateTransitionVersion,
 };
 
-pub(super) const PLATFORM_V0: PlatformVersion = PlatformVersion {
+pub(super) const PLATFORM_V1: PlatformVersion = PlatformVersion {
     protocol_version: 0,
     contract: FeatureVersionBounds {
         min_version: 0,

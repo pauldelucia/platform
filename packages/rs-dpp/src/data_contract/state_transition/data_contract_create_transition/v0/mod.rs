@@ -47,8 +47,6 @@ use crate::state_transition::StateTransitionType::DataContractCreate;
 #[serde(rename_all = "camelCase")]
 #[platform_error_type(ProtocolError)]
 pub struct DataContractCreateTransitionV0 {
-    #[serde(rename = "type")]
-    pub transition_type: StateTransitionType,
     pub data_contract: DataContract,
     pub entropy: Bytes32,
     #[exclude_from_sig_hash]
@@ -60,7 +58,6 @@ pub struct DataContractCreateTransitionV0 {
 impl Default for DataContractCreateTransitionV0 {
     fn default() -> Self {
         DataContractCreateTransitionV0 {
-            transition_type: StateTransitionType::DataContractCreate,
             entropy: Bytes32::default(),
             signature_public_key_id: 0,
             signature: BinaryData::default(),
@@ -189,7 +186,7 @@ impl StateTransitionLike for DataContractCreateTransitionV0 {
     }
     /// returns the type of State Transition
     fn state_transition_type(&self) -> StateTransitionType {
-        self.transition_type
+        DataContractCreate
     }
     /// returns the signature as a byte-array
     fn signature(&self) -> &BinaryData {
@@ -262,7 +259,6 @@ impl StateTransitionConvert for DataContractCreateTransitionV0 {
 impl From<DataContract> for DataContractCreateTransitionV0 {
     fn from(value: DataContract) -> Self {
         DataContractCreateTransitionV0 {
-            transition_type: DataContractCreate,
             data_contract: value,
             entropy: Default::default(),
             signature_public_key_id: 0,

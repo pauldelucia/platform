@@ -24,7 +24,6 @@ impl DataContractCreateTransition {
         data_contract.owner_id = identity.id;
         data_contract.id = generate_data_contract_id(identity.id, data_contract.entropy);
         let mut transition = DataContractCreateTransition::V0(DataContractCreateTransitionV0 {
-            transition_type: DataContractCreate,
             data_contract,
             entropy: Default::default(),
             signature_public_key_id: key_id,
