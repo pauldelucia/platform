@@ -1,12 +1,16 @@
 use crate::data_contract::generate_data_contract_id;
-use crate::data_contract::state_transition::data_contract_create_transition::DataContractCreateTransition;
-use crate::data_contract::state_transition::data_contract_update_transition::DataContractUpdateTransition;
+use crate::data_contract::state_transition::data_contract_create_transition::{
+    DataContractCreateTransition, DataContractCreateTransitionV0,
+};
+use crate::data_contract::state_transition::data_contract_update_transition::{
+    DataContractUpdateTransition, DataContractUpdateTransitionV0,
+};
 use crate::identity::signer::Signer;
 use crate::identity::{KeyID, PartialIdentity};
 use crate::prelude::DataContract;
 use crate::serialization_traits::{PlatformDeserializable, Signable};
-use crate::state_transition::StateTransitionConvert;
 use crate::state_transition::StateTransitionType::{DataContractCreate, DataContractUpdate};
+use crate::state_transition::{StateTransitionConvert, StateTransitionLike};
 use crate::version::LATEST_VERSION;
 use crate::{NonConsensusError, ProtocolError};
 
@@ -19,14 +23,13 @@ impl DataContractCreateTransition {
     ) -> Result<Self, ProtocolError> {
         data_contract.owner_id = identity.id;
         data_contract.id = generate_data_contract_id(identity.id, data_contract.entropy);
-        let mut transition = DataContractCreateTransition {
-            protocol_version: LATEST_VERSION,
+        let mut transition = DataContractCreateTransition::V0(DataContractCreateTransitionV0 {
             transition_type: DataContractCreate,
             data_contract,
             entropy: Default::default(),
             signature_public_key_id: key_id,
             signature: Default::default(),
-        };
+        });
         let value = transition.signable_bytes()?;
         let public_key =
             identity
@@ -37,7 +40,7 @@ impl DataContractCreateTransition {
                         "public key did not exist".to_string(),
                     ),
                 ))?;
-        transition.signature = signer.sign(public_key, &value)?.into();
+        transition.set_signature(signer.sign(public_key, &value)?.into());
         Ok(transition)
     }
 }
@@ -49,13 +52,12 @@ impl DataContractUpdateTransition {
         key_id: KeyID,
         signer: &S,
     ) -> Result<Self, ProtocolError> {
-        let mut transition = DataContractUpdateTransition {
-            protocol_version: LATEST_VERSION,
+        let mut transition = DataContractUpdateTransition::V0(DataContractUpdateTransitionV0 {
             transition_type: DataContractUpdate,
             data_contract,
             signature_public_key_id: key_id,
             signature: Default::default(),
-        };
+        });
         let value = transition.signable_bytes()?;
         let public_key =
             identity
@@ -66,7 +68,7 @@ impl DataContractUpdateTransition {
                         "public key did not exist".to_string(),
                     ),
                 ))?;
-        transition.signature = signer.sign(public_key, &value)?.into();
+        transition.set_signature(signer.sign(public_key, &value)?.into());
         Ok(transition)
     }
 }

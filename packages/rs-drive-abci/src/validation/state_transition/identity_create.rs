@@ -3,7 +3,6 @@ use dpp::identity::state_transition::identity_create_transition::validation::bas
 use dpp::identity::state_transition::identity_create_transition::IdentityCreateTransitionAction;
 use dpp::identity::PartialIdentity;
 use dpp::validation::ConsensusValidationResult;
-use dpp::version::PlatformVersion;
 use dpp::{
     identity::state_transition::identity_create_transition::IdentityCreateTransition,
     state_transition::StateTransitionAction, validation::SimpleConsensusValidationResult,
@@ -39,8 +38,8 @@ impl StateTransitionValidation for IdentityCreateTransition {
             return Ok(result);
         }
 
-        PlatformVersion::get(active_protocol_version)?
-            .validate_identity_create_state_transition_version(self.state_transition_version());
+        // PlatformVersion::get(active_protocol_version)?
+        //     .validate_identity_create_state_transition_version(self.state_transition_version());
 
         let result = validate_protocol_version(self.protocol_version);
         if !result.is_valid() {

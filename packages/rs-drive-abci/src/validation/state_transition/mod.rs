@@ -39,7 +39,11 @@ pub fn process_state_transition<'a, C: CoreRPCLike>(
     transaction: TransactionArg,
 ) -> Result<ConsensusValidationResult<ExecutionEvent<'a>>, Error> {
     // Validating structure
-    let result = state_transition.validate_structure(platform.drive, transaction)?;
+    let result = state_transition.validate_structure(
+        platform.drive,
+        transaction,
+        platform.state.current_protocol_version_in_consensus,
+    )?;
     if !result.is_valid() {
         return Ok(ConsensusValidationResult::<ExecutionEvent>::new_with_errors(result.errors));
     }

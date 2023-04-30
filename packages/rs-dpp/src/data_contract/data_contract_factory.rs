@@ -14,7 +14,7 @@ use crate::data_contract::property_names::PROTOCOL_VERSION;
 use crate::consensus::basic::decode::SerializedObjectParsingError;
 use crate::consensus::basic::BasicError;
 use crate::consensus::ConsensusError;
-use crate::serialization_traits::{PlatformDeserializable, PlatformSerializable};
+use crate::serialization_traits::PlatformDeserializable;
 use crate::util::entropy_generator::{DefaultEntropyGenerator, EntropyGenerator};
 use crate::{
     data_contract::{self, generate_data_contract_id},

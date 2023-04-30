@@ -6,7 +6,6 @@ use async_trait::async_trait;
 use crate::consensus::basic::data_contract::InvalidDataContractVersionError;
 use crate::consensus::basic::document::DataContractNotPresentError;
 use crate::data_contract::state_transition::data_contract_update_transition::action::DataContractUpdateTransitionAction;
-use crate::data_contract::state_transition::data_contract_update_transition::DataContractUpdateTransitionActionV0;
 use crate::state_transition::state_transition_execution_context::StateTransitionExecutionContext;
 use crate::validation::{AsyncDataValidator, ConsensusValidationResult};
 use crate::{

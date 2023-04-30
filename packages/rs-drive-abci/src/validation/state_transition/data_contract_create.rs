@@ -19,7 +19,7 @@ use dpp::consensus::state::data_contract::data_contract_already_present_error::D
 use dpp::consensus::state::state_error::StateError;
 use dpp::state_transition::StateTransitionAction;
 use dpp::data_contract::state_transition::data_contract_create_transition::validation::state::validate_data_contract_create_transition_basic::DATA_CONTRACT_CREATE_SCHEMA_VALIDATOR;
-use dpp::version::{LATEST_PLATFORM_VERSION, LATEST_VERSION, PlatformVersion};
+use dpp::version::PlatformVersion;
 use drive::grovedb::TransactionArg;
 use drive::drive::Drive;
 
@@ -52,17 +52,17 @@ impl StateTransitionValidation for DataContractCreateTransition {
         // Validate data contract id
         let generated_id =
             generate_data_contract_id(self.data_contract().owner_id, self.data_contract().entropy);
-        if generated_id.as_slice() != self.data_contract.id.as_ref() {
+        if generated_id.as_slice() != self.data_contract().id.as_ref() {
             return Ok(SimpleConsensusValidationResult::new_with_error(
                 BasicError::InvalidDataContractIdError(InvalidDataContractIdError::new(
                     generated_id.to_vec(),
-                    self.data_contract.id.as_ref().to_owned(),
+                    self.data_contract().id.as_ref().to_owned(),
                 ))
                 .into(),
             ));
         }
 
-        self.data_contract
+        self.data_contract()
             .validate_structure()
             .map_err(Error::Protocol)
     }
@@ -86,13 +86,13 @@ impl StateTransitionValidation for DataContractCreateTransition {
         let drive = platform.drive;
         // Data contract shouldn't exist
         if drive
-            .get_contract_with_fetch_info(self.data_contract.id.to_buffer(), None, false, tx)?
+            .get_contract_with_fetch_info(self.data_contract().id.to_buffer(), None, false, tx)?
             .1
             .is_some()
         {
             Ok(ConsensusValidationResult::new_with_errors(vec![
                 StateError::DataContractAlreadyPresentError(DataContractAlreadyPresentError::new(
-                    self.data_contract.id.to_owned(),
+                    self.data_contract().id.to_owned(),
                 ))
                 .into(),
             ]))

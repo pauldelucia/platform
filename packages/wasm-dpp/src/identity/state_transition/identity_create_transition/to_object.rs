@@ -29,7 +29,7 @@ pub fn to_object_struct(
     options: ToObjectOptions,
 ) -> ToObject {
     let mut to_object = ToObject {
-        transition_type: transition.get_type() as u8,
+        transition_type: transition.state_transition_type() as u8,
         protocol_version: transition.state_transition_protocol_version(),
         public_keys: transition.get_public_keys().to_owned(),
         asset_lock_proof: transition.get_asset_lock_proof().to_owned(),

@@ -76,12 +76,12 @@ impl DataContractUpdateTransitionWasm {
 
     #[wasm_bindgen(js_name=getDataContract)]
     pub fn get_data_contract(&self) -> DataContractWasm {
-        self.0.data_contract.clone().into()
+        self.0.data_contract().clone().into()
     }
 
     #[wasm_bindgen(js_name=getProtocolVersion)]
     pub fn get_protocol_version(&self) -> u32 {
-        self.0.protocol_version
+        self.0.state_transition_protocol_version()
     }
 
     #[wasm_bindgen(js_name=getEntropy)]

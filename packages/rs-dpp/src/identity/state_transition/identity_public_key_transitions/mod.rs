@@ -106,7 +106,7 @@ impl Convertible for IdentityPublicKeyInCreationWithWitness {
     }
     #[cfg(feature = "cbor")]
     fn to_cbor_buffer(&self) -> Result<Vec<u8>, ProtocolError> {
-        let mut object = self.to_object()?;
+        let object = self.to_object()?;
 
         cbor_serializer::serializable_value_to_cbor(&object, None)
     }

@@ -68,7 +68,6 @@ pub const U32_FIELDS: [&str; 2] = [
 #[serde(rename_all = "camelCase")]
 #[platform_error_type(ProtocolError)]
 pub struct DataContractUpdateTransitionV0 {
-    pub protocol_version: u32,
     #[serde(rename = "type")]
     pub transition_type: StateTransitionType,
     pub data_contract: DataContract,
@@ -81,7 +80,6 @@ pub struct DataContractUpdateTransitionV0 {
 impl Default for DataContractUpdateTransitionV0 {
     fn default() -> Self {
         DataContractUpdateTransitionV0 {
-            protocol_version: Default::default(),
             transition_type: StateTransitionType::DataContractUpdate,
             signature_public_key_id: 0,
             signature: BinaryData::default(),
@@ -95,7 +93,6 @@ impl DataContractUpdateTransitionV0 {
         mut raw_object: Value,
     ) -> Result<DataContractUpdateTransitionV0, ProtocolError> {
         Ok(DataContractUpdateTransitionV0 {
-            protocol_version: raw_object.get_integer(STATE_TRANSITION_PROTOCOL_VERSION)?,
             signature: raw_object
                 .remove_optional_binary_data(SIGNATURE)
                 .map_err(ProtocolError::ValueError)?
@@ -119,9 +116,6 @@ impl DataContractUpdateTransitionV0 {
         mut raw_data_contract_update_transition: BTreeMap<String, Value>,
     ) -> Result<DataContractUpdateTransitionV0, ProtocolError> {
         Ok(DataContractUpdateTransitionV0 {
-            protocol_version: raw_data_contract_update_transition
-                .get_integer(STATE_TRANSITION_PROTOCOL_VERSION)
-                .map_err(ProtocolError::ValueError)?,
             signature: raw_data_contract_update_transition
                 .remove_optional_binary_data(SIGNATURE)
                 .map_err(ProtocolError::ValueError)?
@@ -193,7 +187,7 @@ impl StateTransitionLike for DataContractUpdateTransitionV0 {
     }
 
     fn state_transition_protocol_version(&self) -> u32 {
-        self.protocol_version
+        0
     }
     /// returns the type of State Transition
     fn state_transition_type(&self) -> StateTransitionType {

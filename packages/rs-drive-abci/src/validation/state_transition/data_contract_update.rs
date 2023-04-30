@@ -1,7 +1,9 @@
 use dpp::consensus::basic::data_contract::InvalidDataContractVersionError;
 use dpp::consensus::basic::document::DataContractNotPresentError;
 use dpp::data_contract::state_transition::data_contract_update_transition::validation::basic::DATA_CONTRACT_UPDATE_SCHEMA_VALIDATOR;
+use dpp::data_contract::state_transition::data_contract_update_transition::DataContractUpdateTransitionAction;
 use dpp::identity::PartialIdentity;
+use dpp::validation::{ConsensusValidationResult, SimpleConsensusValidationResult};
 use dpp::version::PlatformVersion;
 use dpp::{
     consensus::basic::{
@@ -26,10 +28,6 @@ use dpp::{
     platform_value::{self, Value},
     state_transition::StateTransitionAction,
     Convertible, ProtocolError,
-};
-use dpp::{
-    data_contract::state_transition::data_contract_update_transition::DataContractUpdateTransitionActionV0,
-    validation::{ConsensusValidationResult, SimpleConsensusValidationResult},
 };
 use drive::drive::Drive;
 use drive::grovedb::TransactionArg;
@@ -60,7 +58,7 @@ impl StateTransitionValidation for DataContractUpdateTransition {
             return Ok(result);
         }
 
-        self.data_contract
+        self.data_contract()
             .validate_structure()
             .map_err(Error::Protocol)
     }
@@ -89,19 +87,19 @@ impl StateTransitionValidation for DataContractUpdateTransition {
         // Data contract should exist
         let Some(contract_fetch_info) =
             drive
-                .get_contract_with_fetch_info(self.data_contract.id.0 .0, None, add_to_cache_if_pulled, tx)?
+                .get_contract_with_fetch_info(self.data_contract().id.0 .0, None, add_to_cache_if_pulled, tx)?
                 .1
             else {
                 validation_result
                     .add_error(BasicError::DataContractNotPresentError(
-                        DataContractNotPresentError::new(self.data_contract.id.0.0.into())
+                        DataContractNotPresentError::new(self.data_contract().id.0.0.into())
                     ));
                 return Ok(validation_result);
             };
 
         let existing_data_contract = &contract_fetch_info.contract;
 
-        let new_version = self.data_contract.version;
+        let new_version = self.data_contract().version;
         let old_version = existing_data_contract.version;
         if new_version < old_version || new_version - old_version != 1 {
             validation_result.add_error(BasicError::InvalidDataContractVersionError(
@@ -110,7 +108,7 @@ impl StateTransitionValidation for DataContractUpdateTransition {
         }
 
         let mut existing_data_contract_object = existing_data_contract.to_object()?;
-        let new_data_contract_object = self.data_contract.to_object()?;
+        let new_data_contract_object = self.data_contract().to_object()?;
 
         existing_data_contract_object
             .remove_many(&vec![
@@ -211,7 +209,7 @@ impl StateTransitionValidation for DataContractUpdateTransition {
         }
 
         let action: StateTransitionAction =
-            Into::<DataContractUpdateTransitionActionV0>::into(self).into();
+            Into::<DataContractUpdateTransitionAction>::into(self).into();
         Ok(action.into())
     }
 }
