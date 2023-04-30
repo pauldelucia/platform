@@ -126,6 +126,7 @@ mod test {
     use platform_value::platform_value;
 
     use super::create_contact_request_data_trigger;
+    use crate::consensus::state::data_trigger::data_trigger_error::DataTriggerError;
     use crate::{
         data_trigger::DataTriggerExecutionContext,
         document::document_transition::Action,

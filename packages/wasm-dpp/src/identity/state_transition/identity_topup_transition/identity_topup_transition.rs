@@ -93,7 +93,7 @@ impl IdentityTopUpTransitionWasm {
 
     #[wasm_bindgen(js_name=getType)]
     pub fn get_type(&self) -> u8 {
-        self.0.get_type() as u8
+        self.0.state_transition_type() as u8
     }
 
     #[wasm_bindgen(getter, js_name=identityId)]

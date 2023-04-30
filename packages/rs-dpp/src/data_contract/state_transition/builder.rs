@@ -52,7 +52,6 @@ impl DataContractUpdateTransition {
         signer: &S,
     ) -> Result<Self, ProtocolError> {
         let mut transition = DataContractUpdateTransition::V0(DataContractUpdateTransitionV0 {
-            transition_type: DataContractUpdate,
             data_contract,
             signature_public_key_id: key_id,
             signature: Default::default(),

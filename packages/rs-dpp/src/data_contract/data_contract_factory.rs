@@ -210,6 +210,7 @@ impl DataContractFactory {
 mod tests {
     use super::*;
     use crate::data_contract::property_names;
+    use crate::serialization_traits::PlatformSerializable;
     use crate::state_transition::StateTransitionLike;
     use crate::tests::fixtures::get_data_contract_fixture;
     use crate::version::{ProtocolVersionValidator, COMPATIBILITY_MAP, LATEST_VERSION};

@@ -39,11 +39,9 @@ fn setup_test() -> TestData {
     updated_data_contract.increment_version();
 
     let state_transition = DataContractUpdateTransition::V0(DataContractUpdateTransitionV0 {
-        protocol_version: LATEST_VERSION,
         data_contract: updated_data_contract,
         signature: BinaryData::new(vec![0; 65]),
         signature_public_key_id: 0,
-        transition_type: StateTransitionType::DataContractUpdate,
     });
 
     let raw_state_transition = state_transition.to_object(false).unwrap();

@@ -1,16 +1,20 @@
 use platform_value::btreemap_extensions::BTreeValueMapHelper;
 use platform_value::btreemap_extensions::BTreeValueRemoveFromMapHelper;
 use platform_value::{BinaryData, IntegerReplacementType, ReplacementType, Value};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
+use std::fmt;
+use std::fmt::Write;
 
 use crate::platform_serialization::PlatformSignable;
 use crate::serialization_traits::PlatformSerializable;
 use crate::serialization_traits::{PlatformDeserializable, Signable};
 use bincode::{config, Decode, Encode};
 use platform_serialization::{PlatformDeserialize, PlatformSerialize};
+use serde::de::{DeserializeSeed, MapAccess, Visitor};
+use serde::ser::SerializeMap;
 
 use crate::data_contract::state_transition::data_contract_update_transition::DataContractUpdateTransition;
 use crate::state_transition::StateTransition;
@@ -68,8 +72,6 @@ pub const U32_FIELDS: [&str; 2] = [
 #[serde(rename_all = "camelCase")]
 #[platform_error_type(ProtocolError)]
 pub struct DataContractUpdateTransitionV0 {
-    #[serde(rename = "type")]
-    pub transition_type: StateTransitionType,
     pub data_contract: DataContract,
     #[exclude_from_sig_hash]
     pub signature_public_key_id: KeyID,
@@ -80,7 +82,6 @@ pub struct DataContractUpdateTransitionV0 {
 impl Default for DataContractUpdateTransitionV0 {
     fn default() -> Self {
         DataContractUpdateTransitionV0 {
-            transition_type: StateTransitionType::DataContractUpdate,
             signature_public_key_id: 0,
             signature: BinaryData::default(),
             data_contract: Default::default(),
@@ -191,7 +192,7 @@ impl StateTransitionLike for DataContractUpdateTransitionV0 {
     }
     /// returns the type of State Transition
     fn state_transition_type(&self) -> StateTransitionType {
-        self.transition_type
+        StateTransitionType::DataContractUpdate
     }
     /// returns the signature as a byte-array
     fn signature(&self) -> &BinaryData {
