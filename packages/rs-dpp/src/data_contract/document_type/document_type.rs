@@ -9,7 +9,7 @@ use crate::data_contract::document_type::{property_names, ArrayFieldType};
 use crate::data_contract::errors::{DataContractError, StructureError};
 
 use crate::document::document_transition::INITIAL_REVISION;
-use crate::document::Document;
+use crate::document::{Document, DocumentV0};
 use crate::prelude::Revision;
 use crate::ProtocolError;
 use platform_value::btreemap_extensions::{BTreeValueMapHelper, BTreeValueRemoveFromMapHelper};
@@ -195,14 +195,15 @@ impl DocumentType {
     }
 
     pub fn convert_value_to_document(&self, mut data: Value) -> Result<Document, ProtocolError> {
-        let mut document = Document {
+        let mut document: Document = DocumentV0 {
             id: data.remove_identifier("$id")?,
             owner_id: data.remove_identifier("$ownerId")?,
             properties: Default::default(),
             revision: data.remove_optional_integer("$revision")?,
             created_at: data.remove_optional_integer("$createdAt")?,
             updated_at: data.remove_optional_integer("$updatedAt")?,
-        };
+        }
+        .into();
 
         data.replace_at_paths(
             self.identifier_paths.iter().map(|s| s.as_str()),

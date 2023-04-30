@@ -19,7 +19,7 @@ use serde_json::json;
 use std::collections::{BTreeMap, HashSet};
 
 /// The `ExtendedDocumentV0` struct represents the data provided by the platform in response to a query.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ExtendedDocumentV0 {
     /// The document type name, stored as a string.
     pub document_type_name: String,
@@ -96,6 +96,13 @@ impl ExtendedDocumentV0 {
         self.document.updated_at.as_ref()
     }
 
+    /// Create an extended document with additional information.
+    ///
+    /// # Arguments
+    ///
+    /// * `document` - A `Document` instance.
+    /// * `data_contract` - A `DataContract` instance.
+    /// * `document_type_name` - A `String` representing the document type name.
     pub fn from_document_with_additional_info(
         document: Document,
         data_contract: DataContract,
@@ -111,6 +118,16 @@ impl ExtendedDocumentV0 {
         }
     }
 
+    /// Create an extended document from a JSON string.
+    ///
+    /// # Arguments
+    ///
+    /// * `string` - A JSON string representing the extended document.
+    /// * `contract` - A `DataContract` instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if there is an error decoding the JSON string.
     pub fn from_json_string(string: &str, contract: DataContract) -> Result<Self, ProtocolError> {
         let json_value: JsonValue = serde_json::from_str(string).map_err(|_| {
             ProtocolError::StringDecodeError("error decoding from json string".to_string())
@@ -118,6 +135,16 @@ impl ExtendedDocumentV0 {
         Self::from_untrusted_platform_value(json_value.into(), contract)
     }
 
+    /// Create an extended document from a raw JSON document.
+    ///
+    /// # Arguments
+    ///
+    /// * `raw_document` - A `JsonValue` representing the raw document.
+    /// * `data_contract` - A `DataContract` instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if there is an error processing the raw JSON document.
     pub fn from_raw_json_document(
         raw_document: JsonValue,
         data_contract: DataContract,
@@ -125,8 +152,17 @@ impl ExtendedDocumentV0 {
         Self::from_untrusted_platform_value(raw_document.into(), data_contract)
     }
 
-    /// Create an extended document from a platform value object where fields are already in the
-    /// proper format for the contract
+    /// Create an extended document from a trusted platform value object where fields are already in
+    /// the proper format for the contract.
+    ///
+    /// # Arguments
+    ///
+    /// * `document_value` - A `Value` representing the document value.
+    /// * `data_contract` - A `DataContract` instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if there is an error processing the trusted platform value.
     pub fn from_trusted_platform_value(
         document_value: Value,
         data_contract: DataContract,
@@ -162,8 +198,17 @@ impl ExtendedDocumentV0 {
         Ok(extended_document)
     }
 
-    /// Create an extended document from a platform value object where fields might not be in the
-    /// proper format for the contract
+    /// Create an extended document from an untrusted platform value object where fields might not
+    /// be in the proper format for the contract.
+    ///
+    /// # Arguments
+    ///
+    /// * `document_value` - A `Value` representing the document value.
+    /// * `data_contract` - A `DataContract` instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if there is an error processing the untrusted platform value.
     pub fn from_untrusted_platform_value(
         document_value: Value,
         data_contract: DataContract,
@@ -210,6 +255,11 @@ impl ExtendedDocumentV0 {
         Ok(extended_document)
     }
 
+    /// Convert the extended document to a JSON object.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if there is an error converting the document to JSON.
     pub fn to_json(&self) -> Result<JsonValue, ProtocolError> {
         let mut value = self.document.to_json()?;
         let value_mut = value.as_object_mut().unwrap();
@@ -228,6 +278,11 @@ impl ExtendedDocumentV0 {
         Ok(value)
     }
 
+    /// Convert the extended document to a pretty JSON object.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if there is an error converting the document to pretty JSON.
     pub fn to_pretty_json(&self) -> Result<JsonValue, ProtocolError> {
         let mut value = self.document.to_json()?;
         let value_mut = value.as_object_mut().unwrap();
@@ -297,8 +352,7 @@ impl ExtendedDocumentV0 {
     }
 
     pub fn into_map_value(self) -> Result<BTreeMap<String, Value>, ProtocolError> {
-        let ExtendedDocument {
-            feature_version: protocol_version,
+        let ExtendedDocumentV0 {
             document_type_name,
             data_contract_id,
             document,
@@ -306,10 +360,7 @@ impl ExtendedDocumentV0 {
         } = self;
 
         let mut object = document.into_map_value()?;
-        object.insert(
-            property_names::FEATURE_VERSION.to_string(),
-            protocol_version.into(),
-        );
+        object.insert(property_names::FEATURE_VERSION.to_string(), Value::U16(0));
         object.insert(
             property_names::DOCUMENT_TYPE.to_string(),
             Value::Text(document_type_name),

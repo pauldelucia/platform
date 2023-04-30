@@ -1,7 +1,22 @@
+use crate::data_contract::document_type::DocumentType;
+use crate::data_contract::DataContract;
+use crate::document::document_transition::document_base_transition::JsonValue;
+use crate::document::property_names::FEATURE_VERSION;
 use crate::document::v0::DocumentV0;
+use crate::identity::TimestampMillis;
+use crate::prelude::Revision;
+use crate::version::FeatureVersion;
+use crate::ProtocolError;
+use derive_more::From;
+use platform_value::btreemap_extensions::BTreeValueMapPathHelper;
+use platform_value::{Identifier, Value};
+use serde::Deserialize;
+use std::collections::{BTreeMap, HashSet};
+use std::convert::TryInto;
 
 /// The property names of a document
 pub mod property_names {
+    pub const FEATURE_VERSION: &str = "$version";
     pub const ID: &str = "$id";
     pub const DATA_CONTRACT_ID: &str = "$dataContractId";
     pub const REVISION: &str = "$revision";
@@ -16,9 +31,141 @@ pub const IDENTIFIER_FIELDS: [&str; 3] = [
     property_names::DATA_CONTRACT_ID,
 ];
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, From)]
 pub enum Document {
     V0(DocumentV0),
+}
+impl Document {
+    /// Return a value given the path to its key for a document type.
+    pub fn get_raw_for_document_type<'a>(
+        &'a self,
+        key_path: &str,
+        document_type: &DocumentType,
+        owner_id: Option<[u8; 32]>,
+    ) -> Result<Option<Vec<u8>>, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.get_raw_for_document_type(key_path, document_type, owner_id),
+        }
+    }
+
+    /// Return a value given the path to its key and the document type for a contract.
+    pub fn get_raw_for_contract<'a>(
+        &'a self,
+        key: &str,
+        document_type_name: &str,
+        contract: &DataContract,
+        owner_id: Option<[u8; 32]>,
+    ) -> Result<Option<Vec<u8>>, ProtocolError> {
+        match self {
+            Document::V0(v0) => {
+                v0.get_raw_for_contract(key, document_type_name, contract, owner_id)
+            }
+        }
+    }
+
+    /// The document is only unique within the contract and document type.
+    /// Hence we must include contract and document type information to get uniqueness.
+    pub fn hash(
+        &self,
+        contract: &DataContract,
+        document_type: &DocumentType,
+    ) -> Result<Vec<u8>, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.hash(contract, document_type),
+        }
+    }
+
+    /// Increment the revision of the document.
+    pub fn increment_revision(&mut self) -> Result<(), ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.increment_revision(),
+        }
+    }
+
+    /// Get the identifiers and binary paths for a document type within a data contract.
+    pub fn get_identifiers_and_binary_paths<'a>(
+        version: FeatureVersion,
+        data_contract: &'a DataContract,
+        document_type_name: &'a str,
+    ) -> Result<(HashSet<&'a str>, HashSet<&'a str>), ProtocolError> {
+        match version {
+            0 => DocumentV0::get_identifiers_and_binary_paths(data_contract, document_type_name),
+            version => Err(ProtocolError::UnknownVersionError(format!(
+                "version {version} not known for document"
+            ))),
+        }
+    }
+
+    /// Convert the document to JSON with identifiers using bytes.
+    pub fn to_json_with_identifiers_using_bytes(&self) -> Result<JsonValue, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.to_json_with_identifiers_using_bytes(),
+        }
+    }
+
+    /// Convert the document to a map value.
+    pub fn to_map_value(&self) -> Result<BTreeMap<String, Value>, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.to_map_value(),
+        }
+    }
+
+    /// Convert the document to a map value consuming the document.
+    pub fn into_map_value(self) -> Result<BTreeMap<String, Value>, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.into_map_value(),
+        }
+    }
+
+    /// Convert the document to a value consuming the document.
+    pub fn into_value(self) -> Result<Value, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.into_value(),
+        }
+    }
+
+    /// Convert the document to an object.
+    pub fn to_object(&self) -> Result<Value, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.to_object(),
+        }
+    }
+
+    /// Convert the document to a JSON value.
+    pub fn to_json(&self) -> Result<JsonValue, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.to_json(),
+        }
+    }
+    /// Create a document from a JSON value.
+    pub fn from_json_value<S>(mut document_value: JsonValue) -> Result<Self, ProtocolError>
+    where
+        for<'de> S: Deserialize<'de> + TryInto<Identifier, Error = ProtocolError>,
+    {
+        Ok(Document::V0(DocumentV0::from_json_value::<S>(
+            document_value,
+        )?))
+    }
+
+    /// Create a document from a platform value.
+    pub fn from_platform_value(document_value: Value) -> Result<Self, ProtocolError> {
+        let version: FeatureVersion = document_value.get_integer(FEATURE_VERSION)?;
+        match version {
+            0 => Ok(Document::V0(DocumentV0::from_platform_value(
+                document_value,
+            )?)),
+            version => Err(ProtocolError::UnknownVersionError(format!(
+                "version {version} not known for document for call from_platform_value"
+            ))),
+        }
+    }
+
+    /// Convert the document to a JSON value.
+    pub fn seria(&self) -> Result<JsonValue, ProtocolError> {
+        match self {
+            Document::V0(v0) => v0.to_json(),
+        }
+    }
 }
 
 #[cfg(test)]

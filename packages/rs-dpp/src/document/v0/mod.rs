@@ -32,6 +32,8 @@
 //! This module defines the `Document` struct and implements its functions.
 //!
 
+pub mod document_facade;
+pub mod document_factory;
 pub mod document_validator;
 pub mod serialize;
 
@@ -64,24 +66,19 @@ use crate::util::json_value::JsonValueExt;
 use crate::ProtocolError;
 
 /// Documents contain the data that goes into data contracts.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DocumentV0 {
-    //todo: add an optional version
     /// The unique document ID.
-    #[serde(rename = "$id")]
     pub id: Identifier,
     /// The ID of the document's owner.
-    #[serde(rename = "$ownerId")]
     pub owner_id: Identifier,
     /// The document's properties (data).
-    #[serde(flatten)]
     pub properties: BTreeMap<String, Value>,
     /// The document revision.
-    #[serde(rename = "$revision")]
     pub revision: Option<Revision>,
-    #[serde(rename = "$createdAt")]
+    /// The time in milliseconds that the document was created
     pub created_at: Option<TimestampMillis>,
-    #[serde(rename = "$updatedAt")]
+    /// The time in milliseconds that the document was last updated
     pub updated_at: Option<TimestampMillis>,
 }
 
@@ -138,64 +135,6 @@ impl DocumentV0 {
         self.get_raw_for_document_type(key, document_type, owner_id)
     }
 
-    /// Set the value under given path.
-    /// The path supports syntax from `lodash` JS lib. Example: "root.people[0].name".
-    /// If parents are not present they will be automatically created
-    pub fn set(&mut self, path: &str, value: Value) {
-        self.properties.insert(path.to_string(), value);
-    }
-
-    /// Retrieves field specified by path
-    pub fn get(&self, path: &str) -> Option<&Value> {
-        // this can only error if path is empty, to which we just return None
-        self.properties.get_optional_at_path(path).ok().flatten()
-    }
-
-    pub fn set_u8(&mut self, property_name: &str, value: u8) {
-        self.properties
-            .insert(property_name.to_string(), Value::U8(value));
-    }
-
-    pub fn set_i8(&mut self, property_name: &str, value: i8) {
-        self.properties
-            .insert(property_name.to_string(), Value::I8(value));
-    }
-
-    pub fn set_u16(&mut self, property_name: &str, value: u16) {
-        self.properties
-            .insert(property_name.to_string(), Value::U16(value));
-    }
-
-    pub fn set_i16(&mut self, property_name: &str, value: i16) {
-        self.properties
-            .insert(property_name.to_string(), Value::I16(value));
-    }
-
-    pub fn set_u32(&mut self, property_name: &str, value: u32) {
-        self.properties
-            .insert(property_name.to_string(), Value::U32(value));
-    }
-
-    pub fn set_i32(&mut self, property_name: &str, value: i32) {
-        self.properties
-            .insert(property_name.to_string(), Value::I32(value));
-    }
-
-    pub fn set_u64(&mut self, property_name: &str, value: u64) {
-        self.properties
-            .insert(property_name.to_string(), Value::U64(value));
-    }
-
-    pub fn set_i64(&mut self, property_name: &str, value: i64) {
-        self.properties
-            .insert(property_name.to_string(), Value::I64(value));
-    }
-
-    pub fn set_bytes(&mut self, property_name: &str, value: Vec<u8>) {
-        self.properties
-            .insert(property_name.to_string(), Value::Bytes(value));
-    }
-
     /// The document is only unique within the contract and document type
     /// Hence we must include contract and document type information to get uniqueness
     pub fn hash(
@@ -212,7 +151,7 @@ impl DocumentV0 {
     pub fn increment_revision(&mut self) -> Result<(), ProtocolError> {
         let Some(revision) = self.revision else {
             return Err(ProtocolError::Document(Box::new(DocumentError::DocumentNoRevisionError {
-                document: Box::new(self.clone()),
+                document: Box::new(self.clone().into()),
             })))
         };
 
@@ -232,31 +171,31 @@ impl DocumentV0 {
         let (mut identifiers_paths, binary_paths) =
             data_contract.get_identifiers_and_binary_paths(document_type_name)?;
 
-        identifiers_paths.extend(IDENTIFIER_FIELDS);
+        identifiers_paths.extend(super::IDENTIFIER_FIELDS);
         Ok((identifiers_paths, binary_paths))
     }
 
     pub fn to_json_with_identifiers_using_bytes(&self) -> Result<JsonValue, ProtocolError> {
         let mut value = json!({
-            property_names::ID: self.id,
-            property_names::OWNER_ID: self.owner_id,
+            super::property_names::ID: self.id,
+            super::property_names::OWNER_ID: self.owner_id,
         });
         let value_mut = value.as_object_mut().unwrap();
         if let Some(created_at) = self.created_at {
             value_mut.insert(
-                property_names::CREATED_AT.to_string(),
+                super::property_names::CREATED_AT.to_string(),
                 JsonValue::Number(created_at.into()),
             );
         }
         if let Some(updated_at) = self.updated_at {
             value_mut.insert(
-                property_names::UPDATED_AT.to_string(),
+                super::property_names::UPDATED_AT.to_string(),
                 JsonValue::Number(updated_at.into()),
             );
         }
         if let Some(revision) = self.revision {
             value_mut.insert(
-                property_names::REVISION.to_string(),
+                super::property_names::REVISION.to_string(),
                 JsonValue::Number(revision.into()),
             );
         }
@@ -274,23 +213,29 @@ impl DocumentV0 {
 
     pub fn to_map_value(&self) -> Result<BTreeMap<String, Value>, ProtocolError> {
         let mut map: BTreeMap<String, Value> = BTreeMap::new();
-        map.insert(property_names::ID.to_string(), self.id.into());
-        map.insert(property_names::OWNER_ID.to_string(), self.owner_id.into());
+        map.insert(super::property_names::ID.to_string(), self.id.into());
+        map.insert(
+            super::property_names::OWNER_ID.to_string(),
+            self.owner_id.into(),
+        );
 
         if let Some(created_at) = self.created_at {
             map.insert(
-                property_names::CREATED_AT.to_string(),
+                super::property_names::CREATED_AT.to_string(),
                 Value::U64(created_at),
             );
         }
         if let Some(updated_at) = self.updated_at {
             map.insert(
-                property_names::UPDATED_AT.to_string(),
+                super::property_names::UPDATED_AT.to_string(),
                 Value::U64(updated_at),
             );
         }
         if let Some(revision) = self.revision {
-            map.insert(property_names::REVISION.to_string(), Value::U64(revision));
+            map.insert(
+                super::property_names::REVISION.to_string(),
+                Value::U64(revision),
+            );
         }
 
         map.extend(self.properties.clone());
@@ -300,23 +245,29 @@ impl DocumentV0 {
 
     pub fn into_map_value(self) -> Result<BTreeMap<String, Value>, ProtocolError> {
         let mut map: BTreeMap<String, Value> = BTreeMap::new();
-        map.insert(property_names::ID.to_string(), self.id.into());
-        map.insert(property_names::OWNER_ID.to_string(), self.owner_id.into());
+        map.insert(super::property_names::ID.to_string(), self.id.into());
+        map.insert(
+            super::property_names::OWNER_ID.to_string(),
+            self.owner_id.into(),
+        );
 
         if let Some(created_at) = self.created_at {
             map.insert(
-                property_names::CREATED_AT.to_string(),
+                super::property_names::CREATED_AT.to_string(),
                 Value::U64(created_at),
             );
         }
         if let Some(updated_at) = self.updated_at {
             map.insert(
-                property_names::UPDATED_AT.to_string(),
+                super::property_names::UPDATED_AT.to_string(),
                 Value::U64(updated_at),
             );
         }
         if let Some(revision) = self.revision {
-            map.insert(property_names::REVISION.to_string(), Value::U64(revision));
+            map.insert(
+                super::property_names::REVISION.to_string(),
+                Value::U64(revision),
+            );
         }
 
         map.extend(self.properties);
@@ -351,21 +302,21 @@ impl DocumentV0 {
             ..Default::default()
         };
 
-        if let Ok(value) = document_value.remove(property_names::ID) {
+        if let Ok(value) = document_value.remove(super::property_names::ID) {
             let data: S = serde_json::from_value(value)?;
             document.id = data.try_into()?;
         }
-        if let Ok(value) = document_value.remove(property_names::OWNER_ID) {
+        if let Ok(value) = document_value.remove(super::property_names::OWNER_ID) {
             let data: S = serde_json::from_value(value)?;
             document.owner_id = data.try_into()?;
         }
-        if let Ok(value) = document_value.remove(property_names::REVISION) {
+        if let Ok(value) = document_value.remove(super::property_names::REVISION) {
             document.revision = serde_json::from_value(value)?
         }
-        if let Ok(value) = document_value.remove(property_names::CREATED_AT) {
+        if let Ok(value) = document_value.remove(super::property_names::CREATED_AT) {
             document.created_at = serde_json::from_value(value)?
         }
-        if let Ok(value) = document_value.remove(property_names::UPDATED_AT) {
+        if let Ok(value) = document_value.remove(super::property_names::UPDATED_AT) {
             document.updated_at = serde_json::from_value(value)?
         }
 
@@ -385,11 +336,13 @@ impl DocumentV0 {
             ..Default::default()
         };
 
-        document.id = properties.remove_identifier(property_names::ID)?;
-        document.owner_id = properties.remove_identifier(property_names::OWNER_ID)?;
-        document.revision = properties.remove_optional_integer(property_names::REVISION)?;
-        document.created_at = properties.remove_optional_integer(property_names::CREATED_AT)?;
-        document.updated_at = properties.remove_optional_integer(property_names::UPDATED_AT)?;
+        document.id = properties.remove_identifier(super::property_names::ID)?;
+        document.owner_id = properties.remove_identifier(super::property_names::OWNER_ID)?;
+        document.revision = properties.remove_optional_integer(super::property_names::REVISION)?;
+        document.created_at =
+            properties.remove_optional_integer(super::property_names::CREATED_AT)?;
+        document.updated_at =
+            properties.remove_optional_integer(super::property_names::UPDATED_AT)?;
 
         document.properties = properties;
         Ok(document)

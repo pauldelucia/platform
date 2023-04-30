@@ -12,8 +12,11 @@ use serde::{Deserialize, Serialize};
 use crate::consensus::basic::document::InvalidDocumentTypeError;
 use crate::document::extended_document::{property_names, ExtendedDocument};
 
-use crate::document::document_transition::INITIAL_REVISION;
-use crate::document::Document;
+use crate::document::document_transition::{Action, INITIAL_REVISION};
+use crate::document::errors::DocumentError;
+use crate::document::fetch_and_validate_data_contract::DataContractFetcherAndValidator;
+use crate::document::generate_document_id::generate_document_id;
+use crate::document::{document_transition, Document, DocumentV0, DocumentsBatchTransition};
 use crate::identity::TimestampMillis;
 use crate::util::entropy_generator::{DefaultEntropyGenerator, EntropyGenerator};
 use crate::version::LATEST_PLATFORM_VERSION;
@@ -34,9 +37,7 @@ use super::{
     DocumentsBatchTransition,
 };
 
-// TODO remove these const and use ones from super::document::property_names
-const PROPERTY_DOCUMENT_PROTOCOL_VERSION: &str = "$protocolVersion";
-const PROPERTY_PROTOCOL_VERSION: &str = "protocolVersion";
+const PROPERTY_FEATURE_VERSION: &str = "$version";
 const PROPERTY_ENTROPY: &str = "$entropy";
 const PROPERTY_ACTION: &str = "$action";
 const PROPERTY_OWNER_ID: &str = "ownerId";
@@ -158,7 +159,7 @@ where
             (None, None)
         };
 
-        let mut document = Document {
+        let mut document = DocumentV0 {
             id: document_id,
             owner_id,
             properties: data
@@ -237,7 +238,7 @@ where
             .owner_id()
             .to_owned();
         for (action, documents) in documents {
-            data_contracts.extend(documents.iter().map(|d| d.data_contract.clone()));
+            data_contracts.extend(documents.iter().map(|d| d.data_contract().clone()));
 
             let raw_transitions = match action {
                 Action::Create => Self::raw_document_create_transitions(documents)?,
@@ -254,8 +255,8 @@ where
 
         let raw_batch_transition = BTreeMap::from([
             (
-                PROPERTY_PROTOCOL_VERSION.to_string(),
-                Value::U32(self.protocol_version),
+                PROPERTY_FEATURE_VERSION.to_string(),
+                Value::U16(LATEST_PLATFORM_VERSION.document.default_current_version),
             ),
             (
                 PROPERTY_OWNER_ID.to_string(),
@@ -430,14 +431,14 @@ where
             .map(|document| {
                 let mut map: BTreeMap<String, Value> = BTreeMap::new();
                 map.insert(PROPERTY_ACTION.to_string(), Value::U8(Action::Delete as u8));
-                map.insert(PROPERTY_ID.to_string(), document.document.id.into());
+                map.insert(PROPERTY_ID.to_string(), document.document().id.into());
                 map.insert(
                     PROPERTY_TYPE.to_string(),
-                    Value::Text(document.document_type_name),
+                    Value::Text(document.document_type_name().clone()),
                 );
                 map.insert(
                     PROPERTY_DATA_CONTRACT_ID.to_string(),
-                    document.data_contract_id.into(),
+                    document.data_contract_id().into(),
                 );
                 map.into()
             })

@@ -36,7 +36,7 @@
 use crate::data_contract::document_type::property_names::{CREATED_AT, UPDATED_AT};
 use crate::data_contract::document_type::DocumentType;
 use crate::document::generate_document_id::generate_document_id;
-use crate::document::Document;
+use crate::document::{Document, DocumentV0};
 use crate::identity::Identity;
 use crate::ProtocolError;
 use platform_value::{Bytes32, Identifier};
@@ -185,7 +185,7 @@ impl CreateRandomDocument for DocumentType {
             None
         };
 
-        Document {
+        DocumentV0 {
             id,
             properties,
             owner_id,
@@ -193,6 +193,7 @@ impl CreateRandomDocument for DocumentType {
             created_at,
             updated_at,
         }
+        .into()
     }
 
     /// Creates `count` Documents with properties filled to max size with random data, along with
@@ -241,7 +242,7 @@ impl CreateRandomDocument for DocumentType {
             None
         };
 
-        Document {
+        DocumentV0 {
             id,
             properties,
             owner_id,
@@ -249,5 +250,6 @@ impl CreateRandomDocument for DocumentType {
             created_at: None,
             updated_at: None,
         }
+        .into()
     }
 }

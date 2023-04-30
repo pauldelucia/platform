@@ -1,3 +1,4 @@
+mod accessors;
 mod serde_serialize;
 mod v0;
 
@@ -50,9 +51,210 @@ pub const IDENTIFIER_FIELDS: [&str; 3] = [
     property_names::OWNER_ID,
 ];
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub enum ExtendedDocument {
     V0(ExtendedDocumentV0),
+}
+impl ExtendedDocument {
+    /// Returns the properties of the document as a JSON value.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if there's an error in converting the properties to JSON.
+    pub fn properties_as_json_data(&self) -> Result<JsonValue, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.properties_as_json_data(),
+        }
+    }
+
+    /// Returns an optional reference to the value associated with the specified key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to look up in the properties of the document.
+    pub fn get_optional_value(&self, key: &str) -> Option<&Value> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.get_optional_value(key),
+        }
+    }
+
+    /// Checks if the document can be modified.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if the document type is not found in the data contract.
+    pub fn can_be_modified(&self) -> Result<bool, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.can_be_modified(),
+        }
+    }
+
+    /// Checks if the document needs a revision.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ProtocolError` if the document type is not found in the data contract.
+    pub fn needs_revision(&self) -> Result<bool, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.needs_revision(),
+        }
+    }
+
+    /// Create an extended document from a JSON string and a data contract.
+    ///
+    /// This function is a passthrough to the `from_json_string` method.
+    pub fn from_json_string(string: &str, contract: DataContract) -> Result<Self, ProtocolError> {
+        Ok(ExtendedDocument::V0(ExtendedDocumentV0::from_json_string(
+            string, contract,
+        )?))
+    }
+
+    /// Create an extended document from a raw JSON document and a data contract.
+    ///
+    /// This function is a passthrough to the `from_raw_json_document` method.
+    pub fn from_raw_json_document(
+        raw_document: JsonValue,
+        data_contract: DataContract,
+    ) -> Result<Self, ProtocolError> {
+        Ok(ExtendedDocument::V0(
+            ExtendedDocumentV0::from_raw_json_document(raw_document, data_contract)?,
+        ))
+    }
+
+    /// Convert the extended document to a JSON object.
+    ///
+    /// This function is a passthrough to the `to_json` method.
+    pub fn to_json(&self) -> Result<JsonValue, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.to_json(),
+        }
+    }
+
+    /// Convert the extended document to a pretty JSON object.
+    ///
+    /// This function is a passthrough to the `to_pretty_json` method.
+    pub fn to_pretty_json(&self) -> Result<JsonValue, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.to_pretty_json(),
+        }
+    }
+
+    /// Create an extended document from a CBOR buffer.
+    ///
+    /// This function is a passthrough to the `from_cbor_buffer` method.
+    #[cfg(feature = "cbor")]
+    pub fn from_cbor_buffer(cbor_bytes: impl AsRef<[u8]>) -> Result<Self, ProtocolError> {
+        Ok(ExtendedDocument::V0(ExtendedDocumentV0::from_cbor_buffer(
+            cbor_bytes,
+        )?))
+    }
+
+    /// Convert the extended document to a BTreeMap of string keys and Value instances.
+    ///
+    /// This function is a passthrough to the `to_map_value` method.
+    pub fn to_map_value(&self) -> Result<BTreeMap<String, Value>, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.to_map_value(),
+        }
+    }
+
+    /// Convert the extended document to a BTreeMap of string keys and Value instances consuming the instance.
+    ///
+    /// This function is a passthrough to the `into_map_value` method.
+    pub fn into_map_value(self) -> Result<BTreeMap<String, Value>, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.into_map_value(),
+        }
+    }
+
+    /// Convert the extended document to a Value instance consuming the instance.
+    ///
+    /// This function is a passthrough to the `into_value` method.
+    pub fn into_value(self) -> Result<Value, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.into_value(),
+        }
+    }
+
+    /// Convert the extended document to a Value instance.
+    ///
+    /// This function is a passthrough to the `to_value` method.
+    pub fn to_value(&self) -> Result<Value, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.to_value(),
+        }
+    }
+
+    /// Convert the extended document to a JSON object for validation.
+    ///
+    /// This function is a passthrough to the `to_json_object_for_validation` method.
+    pub fn to_json_object_for_validation(&self) -> Result<JsonValue, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.to_json_object_for_validation(),
+        }
+    }
+
+    /// Convert the extended document to a CBOR buffer.
+    ///
+    /// This function is a passthrough to the `to_cbor_buffer` method.
+    #[cfg(feature = "cbor")]
+    pub fn to_cbor_buffer(&self) -> Result<Vec<u8>, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.to_cbor_buffer(),
+        }
+    }
+
+    /// Calculate the hash of the extended document.
+    ///
+    /// This function is a passthrough to the `hash` method.
+    #[cfg(feature = "cbor")]
+    pub fn hash(&self) -> Result<Vec<u8>, ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.hash(),
+        }
+    }
+
+    /// Set the value under the given path.
+    ///
+    /// This function is a passthrough to the `set` method.
+    pub fn set(&mut self, path: &str, value: Value) -> Result<(), ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.set(path, value),
+        }
+    }
+
+    /// Retrieve the field specified by the path.
+    ///
+    /// This function is a passthrough to the `get` method.
+    pub fn get(&self, path: &str) -> Option<&Value> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.get(path),
+        }
+    }
+
+    /// Get the identifiers and binary paths.
+    ///
+    /// This function is a passthrough to the `get_identifiers_and_binary_paths` method.
+    pub fn get_identifiers_and_binary_paths(
+        &self,
+    ) -> Result<(HashSet<&str>, HashSet<&str>), ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.get_identifiers_and_binary_paths(),
+        }
+    }
+
+    /// Get the identifiers and binary paths with owned strings.
+    ///
+    /// This function is a passthrough to the `get_identifiers_and_binary_paths_owned` method.
+    pub fn get_identifiers_and_binary_paths_owned<
+        I: IntoIterator<Item = String> + Extend<String> + Default,
+    >(
+        &self,
+    ) -> Result<(I, I), ProtocolError> {
+        match self {
+            ExtendedDocument::V0(v0) => v0.get_identifiers_and_binary_paths_owned(),
+        }
+    }
 }
 
 #[cfg(test)]

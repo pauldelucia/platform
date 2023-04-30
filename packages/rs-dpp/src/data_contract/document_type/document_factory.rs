@@ -1,7 +1,7 @@
 use crate::data_contract::document_type::property_names::{CREATED_AT, UPDATED_AT};
 use crate::data_contract::document_type::DocumentType;
 use crate::document::document_transition::INITIAL_REVISION;
-use crate::document::Document;
+use crate::document::{Document, DocumentV0};
 use crate::prelude::TimestampMillis;
 use crate::ProtocolError;
 use chrono::Utc;
@@ -37,13 +37,14 @@ impl DocumentType {
             None
         };
 
-        Ok(Document {
+        Ok(DocumentV0 {
             id,
             owner_id,
             properties,
             revision,
             created_at,
             updated_at,
-        })
+        }
+        .into())
     }
 }
