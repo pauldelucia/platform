@@ -6,7 +6,9 @@ use crate::query::DriveQuery;
 use dpp::document::Document;
 use grovedb::{GroveDb, PathQuery};
 
-impl<'a> DriveQuery<'a> {
+use super::QueryVerifier;
+
+impl<'a> QueryVerifier for DriveQuery<'a> {
     /// Verifies the given proof and returns the root hash of the GroveDB tree and a vector
     /// of serialized documents if the verification is successful.
     ///
@@ -22,13 +24,9 @@ impl<'a> DriveQuery<'a> {
     /// * The start at document is not present in proof and it is expected to be.
     /// * The path query fails to verify against the given proof.
     /// * Converting the element into bytes fails.
-    pub fn verify_proof_keep_serialized(
-        &self,
-        proof: &[u8],
-    ) -> Result<(RootHash, Vec<Vec<u8>>), Error> {
+    fn verify_documents_serialized(&self, proof: &[u8]) -> Result<(RootHash, Vec<Vec<u8>>), Error> {
         let path_query = if let Some(start_at) = &self.start_at {
-            let (_, start_document) =
-                self.verify_start_at_document_in_proof(proof, true, *start_at)?;
+            let (_, start_document) = self.verify_first_document_proof(proof, true, *start_at)?;
             let document = start_document.ok_or(Error::Proof(ProofError::IncompleteProof(
                 "expected start at document to be present in proof",
             )))?;
@@ -70,8 +68,8 @@ impl<'a> DriveQuery<'a> {
     /// This function will return an `Error` variant if:
     /// 1. The proof verification fails.
     /// 2. There is a deserialization error when parsing the serialized document(s) into `Document` struct(s).
-    pub fn verify_proof(&self, proof: &[u8]) -> Result<(RootHash, Vec<Document>), Error> {
-        self.verify_proof_keep_serialized(proof)
+    fn verify_documents_proof(&self, proof: &[u8]) -> Result<(RootHash, Vec<Document>), Error> {
+        self.verify_documents_serialized(proof)
             .map(|(root_hash, documents)| {
                 let documents = documents
                     .into_iter()
@@ -104,7 +102,7 @@ impl<'a> DriveQuery<'a> {
     /// This function returns an Error in the following cases:
     /// * If the proof is corrupted (wrong path, wrong key, etc.).
     /// * If the provided proof has an incorrect number of elements.
-    pub fn verify_start_at_document_in_proof(
+    fn verify_first_document_proof(
         &self,
         proof: &[u8],
         is_proof_subset: bool,

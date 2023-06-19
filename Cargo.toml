@@ -16,4 +16,5 @@ members = [
     "packages/dpns-contract",
     "packages/data-contracts",
     "packages/rs-drive-verify-c-binding",
+    "packages/rs-sdk",
 ]

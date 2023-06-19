@@ -4,6 +4,7 @@ use dpp::document::document_transition::DocumentTransitionAction;
 use dpp::document::Document;
 use dpp::identity::PartialIdentity;
 use dpp::state_transition::{StateTransition, StateTransitionAction, StateTransitionLike};
+use drive::drive::verify::{ContractVerifier, DocumentVerifier, IdentityVerifier};
 use drive::drive::Drive;
 use drive::query::SingleDocumentDriveQuery;
 use drive_abci::abci::AbciApplication;

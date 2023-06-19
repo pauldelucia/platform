@@ -17,7 +17,9 @@ use dpp::serialization_traits::PlatformDeserializable;
 use grovedb::GroveDb;
 use std::collections::BTreeMap;
 
-impl Drive {
+use super::IdentityVerifier;
+
+impl IdentityVerifier for Drive {
     /// Verifies the full identity of a user by their public key hash.
     ///
     /// This function takes a byte slice `proof` and a 20-byte array `public_key_hash` as arguments,
@@ -46,7 +48,7 @@ impl Drive {
     /// * The public key hash does not correspond to a valid identity ID.
     /// * The identity ID does not correspond to a valid full identity.
     ///
-    pub fn verify_full_identity_by_public_key_hash(
+    fn verify_full_identity_by_public_key_hash(
         proof: &[u8],
         public_key_hash: [u8; 20],
     ) -> Result<(RootHash, Option<Identity>), Error> {
@@ -92,8 +94,8 @@ impl Drive {
     /// - Any of the public key hashes do not correspond to a valid identity ID.
     /// - Any of the identity IDs do not correspond to a valid full identity.
     ///
-    pub fn verify_full_identities_by_public_key_hashes<
-        T: FromIterator<([u8; 20], Option<Identity>)>,
+    fn verify_full_identities_by_public_key_hashes<
+        T: FromIterator<([u8; 20], Option<Identity>)> + 'static,
     >(
         proof: &[u8],
         public_key_hashes: &[[u8; 20]],
@@ -144,7 +146,7 @@ impl Drive {
     /// - The identity ID does not correspond to a valid full identity.
     /// - The balance, revision, or keys information is missing or incorrect.
     ///
-    pub fn verify_full_identity_by_identity_id(
+    fn verify_full_identity_by_identity_id(
         proof: &[u8],
         is_proof_subset: bool,
         identity_id: [u8; 32],
@@ -262,7 +264,7 @@ impl Drive {
     /// - The identity ID does not correspond to a valid partial identity.
     /// - The keys information is missing or incorrect.
     ///
-    pub fn verify_identity_keys_by_identity_id(
+    fn verify_identity_keys_by_identity_id(
         proof: &[u8],
         is_proof_subset: bool,
         identity_id: [u8; 32],
@@ -331,7 +333,7 @@ impl Drive {
     /// - The proved key value is not for the correct path or key in unique key hashes.
     /// - More than one identity ID is found.
     ///
-    pub fn verify_identity_id_by_public_key_hash(
+    fn verify_identity_id_by_public_key_hash(
         proof: &[u8],
         is_proof_subset: bool,
         public_key_hash: [u8; 20],
@@ -400,7 +402,7 @@ impl Drive {
     /// - The proved key value is not for the correct path or key in balances.
     /// - More than one balance is found.
     ///
-    pub fn verify_identity_balance_for_identity_id(
+    fn verify_identity_balance_for_identity_id(
         proof: &[u8],
         identity_id: [u8; 32],
         verify_subset_of_proof: bool,
@@ -472,8 +474,8 @@ impl Drive {
     /// - The number of proved key values does not match the number of identity IDs provided.
     /// - The value size of the balance is incorrect.
     ///
-    pub fn verify_identity_balances_for_identity_ids<
-        T: FromIterator<([u8; 32], Option<Credits>)>,
+    fn verify_identity_balances_for_identity_ids<
+        T: FromIterator<([u8; 32], Option<Credits>)> + 'static,
     >(
         proof: &[u8],
         is_proof_subset: bool,
@@ -547,8 +549,8 @@ impl Drive {
     /// - The number of proved key values does not match the number of public key hashes provided.
     /// - The value size of the identity ID is incorrect.
     ///
-    pub fn verify_identity_ids_by_public_key_hashes<
-        T: FromIterator<([u8; 20], Option<[u8; 32]>)>,
+    fn verify_identity_ids_by_public_key_hashes<
+        T: FromIterator<([u8; 20], Option<[u8; 32]>)> + 'static,
     >(
         proof: &[u8],
         is_proof_subset: bool,

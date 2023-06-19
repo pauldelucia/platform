@@ -853,6 +853,7 @@ mod test {
         use dpp::tests::fixtures::get_data_contract_fixture;
         use dpp::validation::ValidationResult;
         use drive::drive::Drive;
+        use drive::drive::verify::ContractVerifier;
         use drive::error::contract::ContractError;
         use prost::Message;
         use serde_json::json;

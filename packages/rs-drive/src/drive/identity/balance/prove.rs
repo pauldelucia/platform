@@ -44,6 +44,8 @@ mod tests {
 
     mod prove_identity_balance {
 
+        use crate::drive::verify::IdentityVerifier;
+
         use super::*;
 
         #[test]
@@ -72,7 +74,7 @@ mod tests {
 
     mod prove_many_identity_balances {
         use super::*;
-        use crate::fee::credits::Credits;
+        use crate::{fee::credits::Credits, drive::verify::IdentityVerifier};
         use std::collections::BTreeMap;
 
         #[test]
