@@ -1,26 +1,21 @@
-use std::sync::Arc;
-
-use dapi_grpc::platform::v0::get_proofs_request::DocumentRequest;
-pub use drive::drive::verify::RootHash;
-pub use drive::drive::verify::{
-    ContractVerifier, DataContract, Document, DocumentType, DocumentVerifier, Identity,
-    IdentityVerifier, PartialIdentity, QueryVerifier,
-};
-use drive::{drive::Drive, query::DriveQuery, query::SingleDocumentDriveQuery};
-
-#[cfg(feature = "mockall")]
-pub use drive::drive::verify::{
-    MockContractVerifier, MockDocumentVerifier, MockIdentityVerifier, MockQueryVerifier,
+use dapi_grpc::platform::v0::{GetIdentitiesByPublicKeyHashesResponse, GetIdentityRequest, Proof};
+use drive::{
+    dpp::{identity::PartialIdentity, prelude::Identity},
+    drive::{verify::RootHash, Drive},
+    fee::credits::Credits,
+    query::DriveQuery,
+    query::SingleDocumentDriveQuery,
 };
 
 use crate::error::Error;
 
-struct IdentityProof<'a> {
-    proof: &'a [u8],
+/// Identity proof
+pub struct IdentityProof {
+    proof: Proof,
 }
 
-impl<'a> IdentityProof<'a> {
-    pub fn new(proof: &'a [u8]) -> Self {
+impl IdentityProof {
+    pub fn new(request: GetIdentitiesByPublicKeyHashesResponse, proof: Proof) -> Self {
         Self { proof }
     }
     /// Verifies the full identity of a user by their public key hash.
@@ -51,8 +46,8 @@ impl<'a> IdentityProof<'a> {
     /// * The public key hash does not correspond to a valid identity ID.
     /// * The identity ID does not correspond to a valid full identity.
     ///
-    pub fn by_pubkey(
-        proof: &[u8],
+    pub fn identity_by_pubkey(
+        &self,
         public_key_hash: [u8; 20],
     ) -> Result<(RootHash, Option<Identity>), Error> {
         todo!()
@@ -89,7 +84,7 @@ impl<'a> IdentityProof<'a> {
     /// - Any of the identity IDs do not correspond to a valid full identity.
     ///
     pub fn identity_by_pubkeys<T: FromIterator<([u8; 20], Option<Identity>)> + 'static>(
-        proof: &[u8],
+        &self,
         public_key_hashes: &[[u8; 20]],
     ) -> Result<(RootHash, T), Error> {
         todo!()
@@ -148,10 +143,12 @@ impl<'a> IdentityProof<'a> {
     /// - The keys information is missing or incorrect.
     ///
     fn keys_by_id(
-        proof: &[u8],
+        &self,
         is_proof_subset: bool,
         identity_id: [u8; 32],
-    ) -> Result<(RootHash, Option<PartialIdentity>), Error>;
+    ) -> Result<(RootHash, Option<PartialIdentity>), Error> {
+        panic!()
+    }
 
     /// Verifies the identity ID of a user by their public key hash.
     ///
@@ -176,11 +173,13 @@ impl<'a> IdentityProof<'a> {
     /// - The proved key value is not for the correct path or key in unique key hashes.
     /// - More than one identity ID is found.
     ///
-    fn verify_and_retrieve_identity_id_by_pubkey(
-        proof: &[u8],
+    fn id_by_pubkey(
+        &self,
         is_proof_subset: bool,
         public_key_hash: [u8; 20],
-    ) -> Result<(RootHash, Option<[u8; 32]>), Error>;
+    ) -> Result<(RootHash, Option<[u8; 32]>), Error> {
+        todo!()
+    }
     /// Verifies the balance of an identity by their identity ID.
     ///
     /// `verify_subset_of_proof` is used to indicate if we want to verify a subset of a bigger proof.
@@ -208,11 +207,13 @@ impl<'a> IdentityProof<'a> {
     /// - The proved key value is not for the correct path or key in balances.
     /// - More than one balance is found.
     ///
-    fn verify_and_retrieve_identity_balance_by_id(
-        proof: &[u8],
+    fn balance_by_id(
+        &self,
         identity_id: [u8; 32],
         verify_subset_of_proof: bool,
-    ) -> Result<(RootHash, Option<u64>), Error>;
+    ) -> Result<(RootHash, Option<u64>), Error> {
+        todo!()
+    }
 
     /// Verifies the balances of multiple identities by their identity IDs.
     ///
@@ -242,13 +243,13 @@ impl<'a> IdentityProof<'a> {
     /// - The number of proved key values does not match the number of identity IDs provided.
     /// - The value size of the balance is incorrect.
     ///
-    fn verify_and_retrieve_identity_balances_by_ids<
-        T: FromIterator<([u8; 32], Option<Credits>)> + 'static,
-    >(
-        proof: &[u8],
+    fn balances_by_ids<T: FromIterator<([u8; 32], Option<Credits>)> + 'static>(
+        &self,
         is_proof_subset: bool,
         identity_ids: &[[u8; 32]],
-    ) -> Result<(RootHash, T), Error>;
+    ) -> Result<(RootHash, T), Error> {
+        todo!()
+    }
 
     /// Verifies the identity IDs of multiple identities by their public key hashes.
     ///
@@ -278,81 +279,11 @@ impl<'a> IdentityProof<'a> {
     /// - The number of proved key values does not match the number of public key hashes provided.
     /// - The value size of the identity ID is incorrect.
     ///
-    fn verify_and_retrieve_identity_ids_by_pubkeys<
-        T: FromIterator<([u8; 20], Option<[u8; 32]>)> + 'static,
-    >(
-        proof: &[u8],
+    fn ids_by_pubkeys<T: FromIterator<([u8; 20], Option<[u8; 32]>)> + 'static>(
+        &self,
         is_proof_subset: bool,
         public_key_hashes: &[[u8; 20]],
-    ) -> Result<(RootHash, T), Error>;
-}
-/// Allows verification of proofs
-///
-/// To verify contracts and identities, refer to [ContractVerifier] and [IdentityVerifier] traits.
-///
-/// To verify proof generated by a document query extract documents, use [`Verifier::for_query()`] to
-/// access [DocumentVerifier] trait for that query.
-pub struct Verifier;
-
-impl Verifier {
-    pub fn new() -> Self {
-        Self
-    }
-
-    /// Verify proof returned by some query
-    ///
-    /// Note that you need to use exactly the same query as was sent to the DAPI.
-    pub fn for_query<'a>(
-        query: &'a DriveQuery,
-    ) -> Result<Box<dyn QueryVerifier + 'a>, crate::error::Error> {
-        Ok(Box::new(query.clone()))
-    }
-
-    pub fn for_document<'a>(
-        doc: &DocumentRequest,
-    ) -> Result<Box<dyn DocumentVerifier>, crate::error::Error> {
-        let doc =
-            SingleDocumentDriveQuery::try_from(doc).map_err(|e| Error::DriveError(e.into()))?;
-
-        Ok(Box::new(doc))
+    ) -> Result<(RootHash, T), Error> {
+        todo!()
     }
 }
-
-impl ContractVerifier for Verifier {
-    fn verify_and_retrieve_contract(
-        proof: &[u8],
-        contract_known_keeps_history: Option<bool>,
-        is_proof_subset: bool,
-        contract_id: [u8; 32],
-    ) -> Result<(drive::drive::verify::RootHash, Option<DataContract>), drive::error::Error> {
-        Drive::verify_and_retrieve_contract(
-            proof,
-            contract_known_keeps_history,
-            is_proof_subset,
-            contract_id,
-        )
-    }
-    fn verify_and_retrieve_contract_history(
-        proof: &[u8],
-        contract_id: [u8; 32],
-        start_at_date: u64,
-        limit: Option<u16>,
-        offset: Option<u16>,
-    ) -> Result<
-        (
-            drive::drive::verify::RootHash,
-            Option<std::collections::BTreeMap<u64, DataContract>>,
-        ),
-        drive::error::Error,
-    > {
-        Drive::verify_and_retrieve_contract_history(
-            proof,
-            contract_id,
-            start_at_date,
-            limit,
-            offset,
-        )
-    }
-}
-
-// impl IdentityVerifier for Verifier {}

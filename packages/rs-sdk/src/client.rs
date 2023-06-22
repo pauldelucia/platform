@@ -1,3 +1,10 @@
+use std::{future::Future, ops::DerefMut, sync::Arc};
+
+use dapi_grpc::platform::v0::Proof;
+use drive::dpp::prelude::{Identifier, Identity};
+use tokio::sync::oneshot;
+use tokio::sync::Mutex;
+use tonic::codegen::{Body, Bytes, StdError};
 use url::Url;
 
 /// Data structures used in platform GRPC
@@ -5,13 +12,18 @@ pub use dapi_grpc::platform::v0 as platform;
 pub use drive::query::DriveQuery;
 
 use crate::error::Error;
+use crate::proof::FromProof;
+use crate::types::DapiResponse;
 use dapi_grpc::platform::v0::platform_client::PlatformClient as GrpcPlatformClient;
 
 /// configure and construct DAPI GRPC client
 ///
 ///
 #[async_trait::async_trait]
-pub trait PlatformClientBuilder<T> {
+pub trait PlatformClientBuilder<'a, T>
+where
+    T: 'a,
+{
     fn new() -> Self;
     /// Set service URL (defaults to testnet)
     fn with_url(self, address: Url) -> Self;
@@ -23,6 +35,9 @@ pub trait PlatformClientBuilder<T> {
     fn with_grpc_client(self, client: GrpcPlatformClient<T>) -> Self;
     /// Allow insecure TLS connections, eg. with invalid and/or self-signed certificates
     fn with_insecure_tls(self, allow: bool) -> Self;
+
+    /// Request proofs for each requst, and verify them every time
+    fn with_proofs(enable: bool) -> Self;
     /// Build platform client working in sync mode
     fn build_sync(self) -> Result<PlatformClientSync<T>, Error>;
     async fn build_async(self) -> Result<PlatformClientAsync<T>, Error>;
@@ -34,12 +49,60 @@ pub struct PlatformClientAsync<T> {
 
 /// Synchronous client of Dash Platform
 ///
+/// Use [`PlatformClientBuilder`] to instantiate.
+///
 /// Internally, it wraps [GrpcPlatformClient] in blocking calls.
 pub struct PlatformClientSync<T> {
-    inner: GrpcPlatformClient<T>,
+    inner: Arc<Mutex<GrpcPlatformClient<T>>>,
+    // inner: Arc<GrpcPlatformClient<T>>,
+    /// whether or not we use proofs whenever possible
+    prove: bool,
 }
 
-impl<T> PlatformClientSync<T> {
+impl<T> PlatformClientSync<T>
+where
+    T: tonic::client::GrpcService<tonic::body::BoxBody> + Send + Sync + 'static,
+    T::Future: Send,
+    T::Error: Into<StdError> + Send,
+    T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+    <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+{
+    /// Call an async runtime in a blocking manner
+    // fn call_blocking2<O, F: Fn() -> O>(&self, future: F) -> Result<O, Error>
+    // where
+    //     F: Send,
+    //     O: Send,
+    // {
+    //     let (tx, rx) = oneshot::channel();
+
+    //     tokio::spawn(async move {
+    //         let result = future();
+    //         tx.send(result);
+    //     });
+
+    //     Ok(rx
+    //         .blocking_recv()
+    //         .map_err(|e| Error::RuntimeError(e.to_string()))?)
+    // }
+
+    /// Call an async runtime in a blocking manner
+    fn call_blocking<F: Future>(future: F) -> Result<F::Output, Error>
+    where
+        F: Send + 'static,
+        F::Output: Send + 'static,
+    {
+        let (tx, rx) = oneshot::channel();
+
+        tokio::spawn(async move {
+            let result = future.await;
+            tx.send(result);
+        });
+
+        Ok(rx
+            .blocking_recv()
+            .map_err(|e| Error::RuntimeError(e.to_string()))?)
+    }
+
     pub fn broadcast_state_transition(
         &mut self,
         request: platform::BroadcastStateTransitionRequest,
@@ -49,9 +112,45 @@ impl<T> PlatformClientSync<T> {
 
     pub fn get_identity(
         &mut self,
-        request: platform::GetIdentityRequest,
-    ) -> std::result::Result<platform::GetIdentityResponse, Error> {
-        todo!()
+        identity_id: Identifier,
+    ) -> std::result::Result<DapiResponse<Identity>, Error> {
+        let request = platform::GetIdentityRequest {
+            id: identity_id.to_vec(),
+            prove: self.prove,
+        };
+
+        let grpc = Arc::clone(&self.inner);
+        let request_fut = request.clone();
+        let fut = async move {
+            let mut guard = grpc.lock().await;
+            let grpc = guard.deref_mut();
+
+            let result = grpc.get_identity(request_fut).await;
+            result
+        };
+
+        let response = Self::call_blocking(fut)??;
+        let response = response.get_ref();
+
+        let ret = match response.result.as_ref().ok_or(Error::EmptyResponse)? {
+            platform::get_identity_response::Result::Identity(i) => {
+                let identity = Identity::from_cbor(&i)?;
+                DapiResponse {
+                    response: identity,
+                    proof: None,
+                }
+            }
+            platform::get_identity_response::Result::Proof(proof) => {
+                let identity = Identity::from_proof(&request, &response)?;
+
+                DapiResponse {
+                    response: identity,
+                    proof: Some(proof.clone()),
+                }
+            }
+        };
+
+        Ok(ret)
     }
 
     pub fn get_identities(

@@ -11,5 +11,8 @@
 pub mod client;
 /// Errors returned by the SDK
 pub mod error;
-/// Proof verification functions
-pub mod verify;
+/// Proof processing
+pub mod proof;
+
+/// Basic types used in SDK
+pub mod types;
