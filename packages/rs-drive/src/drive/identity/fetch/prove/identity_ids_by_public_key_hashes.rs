@@ -35,8 +35,6 @@ mod tests {
     use std::collections::BTreeMap;
 
     mod prove_identity_id_by_unique_public_key_hash {
-        use crate::drive::verify::IdentityVerifier;
-
         use super::*;
 
         #[test]
@@ -75,8 +73,6 @@ mod tests {
     }
 
     mod prove_identity_ids_by_unique_public_key_hashes {
-        use crate::drive::verify::IdentityVerifier;
-
         use super::*;
 
         #[test]

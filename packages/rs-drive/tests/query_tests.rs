@@ -31,7 +31,6 @@
 //!
 
 use ciborium::cbor;
-use drive::drive::verify::ContractVerifier;
 #[cfg(feature = "full")]
 use grovedb::TransactionArg;
 #[cfg(feature = "full")]
@@ -2253,8 +2252,6 @@ fn test_family_basic_queries() {
 #[cfg(feature = "full")]
 #[test]
 fn test_family_person_update() {
-    use drive::drive::verify::QueryVerifier;
-
     let (drive, contract) = setup_family_tests(10, 73509);
 
     let db_transaction = drive.grove.start_transaction();
@@ -2374,7 +2371,7 @@ fn test_family_person_update() {
         .expect("expected proof to be generated");
 
     let (_root_hash, documents) = query
-        .verify_documents_proof(&proof)
+        .verify_proof(&proof)
         .expect("expected to verify proof");
 
     assert_eq!(documents.len(), 1);
@@ -3009,8 +3006,6 @@ fn test_query_with_cached_contract() {
 #[cfg(feature = "full")]
 #[test]
 fn test_dpns_query_contract_verification() {
-    use drive::drive::verify::ContractVerifier;
-
     let (drive, contract) = setup_dpns_tests_with_batches(10, 11456);
 
     let root_hash = drive

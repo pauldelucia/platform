@@ -8,7 +8,7 @@ use dashcore_rpc::dashcore_rpc_json::QuorumType;
 use dpp::identity::{Identity, PartialIdentity};
 use dpp::serialization_traits::PlatformDeserializable;
 use dpp::validation::SimpleValidationResult;
-use drive::drive::verify::{IdentityVerifier, RootHash};
+use drive::drive::verify::RootHash;
 use drive::drive::Drive;
 use drive_abci::abci::{AbciApplication, AbciError};
 use drive_abci::rpc::core::MockCoreRPCLike;

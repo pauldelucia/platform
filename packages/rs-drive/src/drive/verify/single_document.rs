@@ -8,9 +8,7 @@ use dpp::document::Document;
 
 use grovedb::GroveDb;
 
-pub use super::DocumentVerifier;
-
-impl DocumentVerifier for SingleDocumentDriveQuery {
+impl SingleDocumentDriveQuery {
     /// Verifies the proof of a document while keeping it serialized.
     ///
     /// `is_subset` indicates if the function should verify a subset of a larger proof.
@@ -32,7 +30,7 @@ impl DocumentVerifier for SingleDocumentDriveQuery {
     /// - The proof is corrupted.
     /// - The GroveDb verification fails.
     /// - The elements returned are not items, the proof is incorrect.
-    fn verify_proof_keep_serialized(
+    pub fn verify_proof_keep_serialized(
         &self,
         is_subset: bool,
         proof: &[u8],
@@ -81,7 +79,7 @@ impl DocumentVerifier for SingleDocumentDriveQuery {
     /// - The proof is corrupted.
     /// - The GroveDb query fails.
     /// - The document serialization fails.
-    fn verify_proof(
+    pub fn verify_proof(
         &self,
         is_subset: bool,
         proof: &[u8],

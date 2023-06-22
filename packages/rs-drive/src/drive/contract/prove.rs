@@ -1,4 +1,3 @@
-use crate::drive::verify::ContractVerifier;
 use crate::drive::Drive;
 use crate::error::Error;
 

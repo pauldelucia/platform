@@ -1545,8 +1545,6 @@ impl<'a> DriveQuery<'a> {
         transaction: TransactionArg,
         drive_operations: &mut Vec<LowLevelDriveOperation>,
     ) -> Result<([u8; 32], Vec<Vec<u8>>), Error> {
-        use crate::drive::verify::QueryVerifier;
-
         let path_query =
             self.construct_path_query_operations(drive, true, transaction, drive_operations)?;
 
@@ -1556,7 +1554,7 @@ impl<'a> DriveQuery<'a> {
             transaction,
             drive_operations,
         )?;
-        self.verify_documents_serialized(proof.as_slice())
+        self.verify_proof_keep_serialized(proof.as_slice())
     }
 
     #[cfg(feature = "full")]
@@ -1656,13 +1654,6 @@ impl<'a> DriveQuery<'a> {
                 }
             }
         }
-    }
-}
-
-impl<'a> TryFrom<&DriveQuery<'a>> for dapi_grpc::platform::v0::GetDocumentsRequest {
-    type Error = Error;
-    fn try_from(value: &DriveQuery) -> Result<Self, Self::Error> {
-        todo!();
     }
 }
 

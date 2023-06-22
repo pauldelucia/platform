@@ -13,9 +13,7 @@ use crate::common::decode;
 use crate::error::drive::DriveError;
 use grovedb::GroveDb;
 
-use super::ContractVerifier;
-
-impl ContractVerifier for Drive {
+impl Drive {
     /// Verifies that the contract is included in the proof.
     ///
     /// # Parameters
@@ -36,7 +34,7 @@ impl ContractVerifier for Drive {
     ///
     /// - The proof is corrupted.
     /// - The GroveDb query fails.
-    fn verify_contract(
+    pub fn verify_contract(
         proof: &[u8],
         contract_known_keeps_history: Option<bool>,
         is_proof_subset: bool,
@@ -123,7 +121,7 @@ impl ContractVerifier for Drive {
     /// - The proof is corrupted.
     /// - The GroveDb query fails.
     /// - The contract serialization fails.
-    fn verify_contract_history(
+    pub fn verify_contract_history(
         proof: &[u8],
         contract_id: [u8; 32],
         start_at_date: u64,
