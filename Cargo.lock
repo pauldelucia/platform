@@ -3287,6 +3287,7 @@ dependencies = [
  "delegate",
  "drive",
  "mockall",
+ "thiserror",
  "tokio",
  "tonic",
  "url",

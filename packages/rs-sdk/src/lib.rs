@@ -7,11 +7,9 @@
 //! * verify query, contract and
 //!
 
-pub use dapi_grpc;
-
+/// GPRC client for the Dash Platform, including data structures
 pub mod client;
-pub mod query;
+/// Errors returned by the SDK
+pub mod error;
+/// Proof verification functions
 pub mod verify;
-
-pub use drive::error::Error;
-
