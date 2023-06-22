@@ -1,4 +1,4 @@
-use drive::dpp::{prelude::Identifier, ProtocolError};
+use dpp::{prelude::Identifier, ProtocolError};
 
 /// Errors
 #[derive(Debug, thiserror::Error)]

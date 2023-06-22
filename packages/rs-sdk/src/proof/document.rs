@@ -1,5 +1,5 @@
 use dapi_grpc::platform::v0::GetDocumentsResponse;
-use drive::dpp::document::Document;
+use dpp::document::Document;
 use drive::drive::verify::RootHash;
 use drive::query::DriveQuery;
 

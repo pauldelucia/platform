@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use drive::dpp::prelude::DataContract;
+use dpp::prelude::DataContract;
 use drive::drive::verify::RootHash;
 
 use crate::error::Error;

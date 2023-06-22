@@ -11,6 +11,7 @@ description = "Dash Platform Software Development Kit for Rust"
 dapi-grpc = { path = "../dapi-grpc", features = [
     "platform",
 ], default-features = false }
+dpp = { path = "../rs-dpp" }
 drive = { path = "../rs-drive", features = [
     "verify",
 ], default-features = false }
@@ -24,6 +25,9 @@ tonic = { version = "0.9.2", features = [
 ], default-features = false, optional = true }
 url = {}
 async-trait = { version = "0.1.68", optional = true }
+
+[dev-dependencies]
+
 [features]
 
 default = ["mockall", "client", "core"]

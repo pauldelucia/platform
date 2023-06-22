@@ -1,7 +1,6 @@
 use std::{future::Future, ops::DerefMut, sync::Arc};
 
-use dapi_grpc::platform::v0::Proof;
-use drive::dpp::prelude::{Identifier, Identity};
+use dpp::prelude::{Identifier, Identity};
 use tokio::sync::oneshot;
 use tokio::sync::Mutex;
 use tonic::codegen::{Body, Bytes, StdError};

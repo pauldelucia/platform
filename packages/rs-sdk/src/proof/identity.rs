@@ -1,11 +1,6 @@
-use dapi_grpc::platform::v0::{GetIdentitiesByPublicKeyHashesResponse, GetIdentityRequest, Proof};
-use drive::{
-    dpp::{identity::PartialIdentity, prelude::Identity},
-    drive::{verify::RootHash, Drive},
-    fee::credits::Credits,
-    query::DriveQuery,
-    query::SingleDocumentDriveQuery,
-};
+use dapi_grpc::platform::v0::{GetIdentitiesByPublicKeyHashesResponse, Proof};
+use dpp::{identity::PartialIdentity, prelude::Identity};
+use drive::{drive::verify::RootHash, fee::credits::Credits};
 
 use crate::error::Error;
 
