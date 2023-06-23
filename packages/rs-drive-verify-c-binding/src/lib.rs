@@ -8,7 +8,7 @@ use crate::types::{
     PublicKeyHashIdentityMap,
 };
 use crate::util::{build_c_identity_struct, extract_vector_from_pointer, vec_to_pointer};
-use drive::dpp::identity::state_transition::asset_lock_proof::AssetLockProof as DppAssetLockProof;
+use dpp::identity::state_transition::asset_lock_proof::AssetLockProof as DppAssetLockProof;
 use drive::drive::verify::identity::Identity as DppIdentity;
 use drive::drive::Drive;
 use std::collections::BTreeMap;

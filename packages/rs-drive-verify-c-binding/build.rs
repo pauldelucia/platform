@@ -7,4 +7,6 @@ fn main() {
     cbindgen::generate_with_config(crate_dir, config)
         .unwrap()
         .write_to_file("target/drive.h");
+
+    println!("cargo:rerun-if-changed=./src");
 }

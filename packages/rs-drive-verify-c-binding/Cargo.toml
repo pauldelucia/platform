@@ -9,10 +9,11 @@ name = "drive"
 crate-type = ["staticlib"]
 
 [build-dependencies]
-cbindgen = "0.24.3"
+cbindgen = { version = "0.24.3" }
 
 [dependencies]
-hex = "0.4.3"
+hex = { version = "0.4.3" }
+dpp = { path = "../rs-dpp" }
 
 [dependencies.drive]
 path = "../rs-drive"
