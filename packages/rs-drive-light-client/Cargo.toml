@@ -1,0 +1,26 @@
+[package]
+name = "rs-drive-light-client"
+version = "0.1.0"
+edition = "2021"
+crate-type = ["cdylib"]
+
+[dependencies]
+uniffi = { git = "https://github.com/mozilla/uniffi-rs" }
+dapi-grpc = { path = "../dapi-grpc" }
+thiserror = { version = "1.0.39" }
+prost = { version = "0.11" }
+bytes = { version = "*" }
+
+drive = { path = "../rs-drive" }
+dpp = { path = "../rs-dpp" }
+
+camino = { version = "1.1.4", optional = true }
+
+
+[build-dependencies]
+
+uniffi = { git = "https://github.com/mozilla/uniffi-rs", features = ["build"] }
+
+[features]
+default = []
+bindgen = ["uniffi/cli", "dep:camino"]

@@ -17,4 +17,7 @@ members = [
     "packages/data-contracts",
     "packages/rs-drive-verify-c-binding",
     "packages/rs-sdk",
+    "packages/rs-drive-light-client",
+    "packages/rs-drive-light-client-bindings",
+
 ]
