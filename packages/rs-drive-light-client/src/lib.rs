@@ -20,10 +20,13 @@ pub enum Error {
     /// Empty response
     #[error("empty response")]
     EmptyResponse,
+    /// Empty response metadata
+    #[error("empty response metadata")]
+    EmptyResponseMetadata,
 
     /// No proof in response
     #[error("no proof in response")]
-    NoProof,
+    EmptyResponseProof,
 
     /// Document not in proof
     #[error("requested document missing in proof")]
@@ -40,6 +43,30 @@ pub enum Error {
     /// Encode protobuf error
     #[error("encode protobuf: {error}")]
     ProtoEncodeError { error: String },
+
+    /// Cannot generate signature digest for data
+    #[error("cannot generate signature digest for data: {error}")]
+    SignDigestFailed { error: String },
+
+    /// Error during signature verification
+    #[error("error during signature verification: {error}")]
+    SignatureVerificationError { error: String },
+
+    /// Provided quorum is invalid
+    #[error("invalid quorum: {error}")]
+    InvalidQuorum { error: String },
+
+    /// Signature format is invalid
+    #[error("invalid signature format: {error}")]
+    InvalidSignatureFormat { error: String },
+
+    /// Public key is invalid
+    #[error("invalid public key: {error}")]
+    InvalidPublicKey { error: String },
+
+    /// Invalid signature
+    #[error("invalid signature: {error}")]
+    InvalidSignature { error: String },
 }
 
 uniffi::include_scaffolding!("dash_drive_v0");

@@ -10,11 +10,12 @@ dapi-grpc = { path = "../dapi-grpc" }
 thiserror = { version = "1.0.39" }
 prost = { version = "0.11" }
 bytes = { version = "*" }
+camino = { version = "1.1.4", optional = true }
 
 drive = { path = "../rs-drive" }
 dpp = { path = "../rs-dpp" }
-
-camino = { version = "1.1.4", optional = true }
+# tenderdash-abci = { git = "https://github.com/dashpay/rs-tenderdash-abci", branch = "master" }
+tenderdash-abci = { path = "../../../rs-tenderdash-abci/abci" }
 
 
 [build-dependencies]

@@ -2,9 +2,11 @@ use dapi_grpc::platform::v0::*;
 
 /// Create function `$name` that will retrieve CBOR-encoded `$result` object from request `$req` and response `$resp`.
 ///
-/// `$result` must be a type that implements trait FromProof<$req,$resp>.
+/// `$provider` must implement [`crate::proof::QuorumInfoProvider`].
+///
+/// `$result` must be a type that implements trait [`FromProof<$req,$resp,$provider>`](crate::proof::FromProof).
 macro_rules! proof_to_cbor {
-    ($name:ident,$req:ty,$resp:ty, $result:ty) => {
+    ($name:ident,$req:ty,$resp:ty,$result:ty) => {
         /// Given protobuf request and response, retrieve encapsulated objects from proof and encode it using CBOR
         ///
         /// # Arguments
@@ -17,10 +19,11 @@ macro_rules! proof_to_cbor {
         /// Returns CBOR-encoded object(s) retrieved from the server.
         #[no_mangle]
         #[uniffi::export]
-        pub fn $name(req_proto: Vec<u8>, resp_proto: Vec<u8>) -> Result<Vec<u8>, crate::Error>
-        where
-            $result: crate::proof::FromProof<$req, $resp>,
-        {
+        pub fn $name(
+            req_proto: Vec<u8>,
+            resp_proto: Vec<u8>,
+            provider: Box<dyn crate::proof::QuorumInfoProvider>,
+        ) -> Result<Vec<u8>, crate::Error> {
             use crate::proof::FromProof;
             use dapi_grpc::Message;
             let request = <$req>::decode(bytes::Bytes::from(req_proto))
@@ -39,7 +42,7 @@ macro_rules! proof_to_cbor {
                     error: e.to_string(),
                 })?;
 
-            let result = <$result>::from_proof(&request, &response)?;
+            let result = <$result>::from_proof(&request, &response, provider)?;
 
             result.to_cbor().map_err(|e| crate::Error::ProtocolError {
                 error: e.to_string(),
@@ -68,6 +71,11 @@ mod test {
         let req_proto = vec![0u8; 32];
         let resp_proto = vec![0u8; 32];
 
-        super::identity_proof_to_cbor(req_proto, resp_proto).unwrap();
+        super::identity_proof_to_cbor(
+            req_proto,
+            resp_proto,
+            Box::new(crate::proof::MockQuorumInfoProvider {}),
+        )
+        .unwrap();
     }
 }
