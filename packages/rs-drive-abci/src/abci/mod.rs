@@ -13,3 +13,6 @@ pub use error::AbciError;
 #[cfg(feature = "server")]
 pub use server::start;
 pub use server::AbciApplication;
+
+/// Version of Drive sent to Tenderdash
+pub const APP_VERSION: u64 = 1;

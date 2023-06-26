@@ -83,7 +83,7 @@ where
 
         let response = proto::ResponseInfo {
             data: "".to_string(),
-            app_version: 1,
+            app_version: super::APP_VERSION,
             last_block_height: state_guard.last_block_height() as i64,
             version: env!("CARGO_PKG_VERSION").to_string(),
 

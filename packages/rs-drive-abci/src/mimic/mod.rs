@@ -72,7 +72,7 @@ impl<'a, C: CoreRPCLike> AbciApplication<'a, C> {
         state_transitions: Vec<StateTransition>,
         options: MimicExecuteBlockOptions,
     ) -> Result<MimicExecuteBlockOutcome, Error> {
-        const APP_VERSION: u64 = 0;
+        const APP_VERSION: u64 = crate::abci::APP_VERSION;
         const ROUND: i32 = 0;
 
         let mut rng = StdRng::seed_from_u64(block_info.height);
