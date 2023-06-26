@@ -16,6 +16,9 @@ pub mod query;
 /// Serialization errors module
 pub mod serialization;
 
+/// Error codes
+pub mod codes;
+
 // @append_only
 /// Errors
 #[derive(Debug, thiserror::Error)]

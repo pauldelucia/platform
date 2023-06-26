@@ -36,12 +36,13 @@
 //!
 
 use crate::abci::server::AbciApplication;
+use crate::error::codes::ErrorWithCode;
 use crate::error::execution::ExecutionError;
 
 use crate::error::Error;
 use crate::rpc::core::CoreRPCLike;
 use dashcore_rpc::dashcore::hashes::hex::ToHex;
-use dpp::errors::consensus::codes::ErrorWithCode;
+use dpp::errors::consensus::codes::ErrorWithCode as AbciErrorWithCode;
 use dpp::platform_value::platform_value;
 use drive::fee::credits::SignedCredits;
 use serde_json::{json, Value};
@@ -612,7 +613,7 @@ where
                     .map_err(|e| e.to_string())?;
 
                 Ok(ResponseCheckTx {
-                    code: 1, //todo: replace with error.code()
+                    code: error.code(),
                     data: vec![],
                     info: encode(&error_data_buffer, Encoding::Base64),
                     gas_wanted: 0 as SignedCredits,
