@@ -67,6 +67,19 @@ pub enum Error {
     /// Invalid signature
     #[error("invalid signature: {error}")]
     InvalidSignature { error: String },
+
+    /// Callback error
+    #[error("unexpected callback error: {error}")]
+    UnexpectedCallbackError { error: String, reason: String },
+}
+
+impl From<uniffi::UnexpectedUniFFICallbackError> for Error {
+    fn from(value: uniffi::UnexpectedUniFFICallbackError) -> Self {
+        Self::UnexpectedCallbackError {
+            error: value.to_string(),
+            reason: value.reason,
+        }
+    }
 }
 
 uniffi::include_scaffolding!("dash_drive_v0");

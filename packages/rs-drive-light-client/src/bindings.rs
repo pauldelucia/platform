@@ -31,8 +31,11 @@ pub fn generate_uniffi_bindings(destination: Option<&str>) {
         TargetLanguage::Kotlin,
         TargetLanguage::Swift,
         TargetLanguage::Python,
-        TargetLanguage::Ruby,
+        // TargetLanguage::Ruby, // error: callback interfaces not implemented
     ];
+
+    // Remove all bindings; ignore errors
+    std::fs::remove_dir_all(&destination).ok();
 
     for lang in target_languages {
         uniffi::generate_bindings(
