@@ -64,10 +64,12 @@ typedef void (*UniFfiFutureCallbackUInt8)(const void * _Nonnull, uint8_t, RustCa
 typedef void (*UniFfiFutureCallbackRustBuffer)(const void * _Nonnull, RustBuffer, RustCallStatus);
 
 // Scaffolding functions
+void uniffi_dash_drive_v0_fn_init_callback_quoruminfoprovider(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
+);
 void uniffi_rs_drive_light_client_fn_func_hello(RustCallStatus *_Nonnull out_status
     
 );
-RustBuffer uniffi_rs_drive_light_client_fn_func_identity_proof_to_cbor(RustBuffer req_proto, RustBuffer resp_proto, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_rs_drive_light_client_fn_func_identity_proof_to_cbor(RustBuffer req_proto, RustBuffer resp_proto, uint64_t provider, RustCallStatus *_Nonnull out_status
 );
 RustBuffer ffi_dash_drive_v0_rustbuffer_alloc(int32_t size, RustCallStatus *_Nonnull out_status
 );
@@ -81,6 +83,12 @@ uint16_t uniffi_rs_drive_light_client_checksum_func_hello(void
     
 );
 uint16_t uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor(void
+    
+);
+uint16_t uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type(void
+    
+);
+uint16_t uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key(void
     
 );
 uint32_t ffi_dash_drive_v0_uniffi_contract_version(void

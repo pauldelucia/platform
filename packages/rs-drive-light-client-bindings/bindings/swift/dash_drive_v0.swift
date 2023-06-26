@@ -351,11 +351,19 @@ public enum Error {
     case DriveError(`error`: String)
     case ProtocolError(`error`: String)
     case EmptyResponse
-    case NoProof
+    case EmptyResponseMetadata
+    case EmptyResponseProof
     case DocumentMissingInProof
     case ProtoRequestDecodeError(`error`: String)
     case ProtoResponseDecodeError(`error`: String)
     case ProtoEncodeError(`error`: String)
+    case SignDigestFailed(`error`: String)
+    case SignatureVerificationError(`error`: String)
+    case InvalidQuorum(`error`: String)
+    case InvalidSignatureFormat(`error`: String)
+    case InvalidPublicKey(`error`: String)
+    case InvalidSignature(`error`: String)
+    case UnexpectedCallbackError(`error`: String, `reason`: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeError.lift(error)
@@ -380,16 +388,39 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
             `error`: try FfiConverterString.read(from: &buf)
             )
         case 3: return .EmptyResponse
-        case 4: return .NoProof
-        case 5: return .DocumentMissingInProof
-        case 6: return .ProtoRequestDecodeError(
+        case 4: return .EmptyResponseMetadata
+        case 5: return .EmptyResponseProof
+        case 6: return .DocumentMissingInProof
+        case 7: return .ProtoRequestDecodeError(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 7: return .ProtoResponseDecodeError(
+        case 8: return .ProtoResponseDecodeError(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 8: return .ProtoEncodeError(
+        case 9: return .ProtoEncodeError(
             `error`: try FfiConverterString.read(from: &buf)
+            )
+        case 10: return .SignDigestFailed(
+            `error`: try FfiConverterString.read(from: &buf)
+            )
+        case 11: return .SignatureVerificationError(
+            `error`: try FfiConverterString.read(from: &buf)
+            )
+        case 12: return .InvalidQuorum(
+            `error`: try FfiConverterString.read(from: &buf)
+            )
+        case 13: return .InvalidSignatureFormat(
+            `error`: try FfiConverterString.read(from: &buf)
+            )
+        case 14: return .InvalidPublicKey(
+            `error`: try FfiConverterString.read(from: &buf)
+            )
+        case 15: return .InvalidSignature(
+            `error`: try FfiConverterString.read(from: &buf)
+            )
+        case 16: return .UnexpectedCallbackError(
+            `error`: try FfiConverterString.read(from: &buf), 
+            `reason`: try FfiConverterString.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -417,27 +448,67 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(3))
         
         
-        case .NoProof:
+        case .EmptyResponseMetadata:
             writeInt(&buf, Int32(4))
         
         
-        case .DocumentMissingInProof:
+        case .EmptyResponseProof:
             writeInt(&buf, Int32(5))
         
         
-        case let .ProtoRequestDecodeError(`error`):
+        case .DocumentMissingInProof:
             writeInt(&buf, Int32(6))
-            FfiConverterString.write(`error`, into: &buf)
-            
         
-        case let .ProtoResponseDecodeError(`error`):
+        
+        case let .ProtoRequestDecodeError(`error`):
             writeInt(&buf, Int32(7))
             FfiConverterString.write(`error`, into: &buf)
             
         
-        case let .ProtoEncodeError(`error`):
+        case let .ProtoResponseDecodeError(`error`):
             writeInt(&buf, Int32(8))
             FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .ProtoEncodeError(`error`):
+            writeInt(&buf, Int32(9))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .SignDigestFailed(`error`):
+            writeInt(&buf, Int32(10))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .SignatureVerificationError(`error`):
+            writeInt(&buf, Int32(11))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .InvalidQuorum(`error`):
+            writeInt(&buf, Int32(12))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .InvalidSignatureFormat(`error`):
+            writeInt(&buf, Int32(13))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .InvalidPublicKey(`error`):
+            writeInt(&buf, Int32(14))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .InvalidSignature(`error`):
+            writeInt(&buf, Int32(15))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .UnexpectedCallbackError(`error`,`reason`):
+            writeInt(&buf, Int32(16))
+            FfiConverterString.write(`error`, into: &buf)
+            FfiConverterString.write(`reason`, into: &buf)
             
         }
     }
@@ -447,6 +518,220 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
 extension Error: Equatable, Hashable {}
 
 extension Error: Error { }
+
+fileprivate extension NSLock {
+    func withLock<T>(f: () throws -> T) rethrows -> T {
+        self.lock()
+        defer { self.unlock() }
+        return try f()
+    }
+}
+
+fileprivate typealias UniFFICallbackHandle = UInt64
+fileprivate class UniFFICallbackHandleMap<T> {
+    private var leftMap: [UniFFICallbackHandle: T] = [:]
+    private var counter: [UniFFICallbackHandle: UInt64] = [:]
+    private var rightMap: [ObjectIdentifier: UniFFICallbackHandle] = [:]
+
+    private let lock = NSLock()
+    private var currentHandle: UniFFICallbackHandle = 0
+    private let stride: UniFFICallbackHandle = 1
+
+    func insert(obj: T) -> UniFFICallbackHandle {
+        lock.withLock {
+            let id = ObjectIdentifier(obj as AnyObject)
+            let handle = rightMap[id] ?? {
+                currentHandle += stride
+                let handle = currentHandle
+                leftMap[handle] = obj
+                rightMap[id] = handle
+                return handle
+            }()
+            counter[handle] = (counter[handle] ?? 0) + 1
+            return handle
+        }
+    }
+
+    func get(handle: UniFFICallbackHandle) -> T? {
+        lock.withLock {
+            leftMap[handle]
+        }
+    }
+
+    func delete(handle: UniFFICallbackHandle) {
+        remove(handle: handle)
+    }
+
+    @discardableResult
+    func remove(handle: UniFFICallbackHandle) -> T? {
+        lock.withLock {
+            defer { counter[handle] = (counter[handle] ?? 1) - 1 }
+            guard counter[handle] == 1 else { return leftMap[handle] }
+            let obj = leftMap.removeValue(forKey: handle)
+            if let obj = obj {
+                rightMap.removeValue(forKey: ObjectIdentifier(obj as AnyObject))
+            }
+            return obj
+        }
+    }
+}
+
+// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+private let IDX_CALLBACK_FREE: Int32 = 0
+// Callback return codes
+private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
+private let UNIFFI_CALLBACK_ERROR: Int32 = 1
+private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
+
+// Declaration and FfiConverters for QuorumInfoProvider Callback Interface
+
+public protocol QuorumInfoProvider : AnyObject {
+    func `getQuorumType`(`height`: UInt64, `quorumHash`: [UInt8]) throws -> UInt8
+    func `getQuorumPublicKey`(`height`: UInt64, `quorumHash`: [UInt8]) throws -> [UInt8]
+    
+}
+
+// The ForeignCallback that is passed to Rust.
+fileprivate let foreignCallbackCallbackInterfaceQuorumInfoProvider : ForeignCallback =
+    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+    
+
+    func `invokeGetQuorumType`(_ swiftCallbackInterface: QuorumInfoProvider, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            let result = try swiftCallbackInterface.`getQuorumType`(
+                    `height`:  try FfiConverterUInt64.read(from: &reader), 
+                    `quorumHash`:  try FfiConverterSequenceUInt8.read(from: &reader)
+                    )
+            var writer = [UInt8]()
+            FfiConverterUInt8.write(result, into: &writer)
+            out_buf.pointee = RustBuffer(bytes: writer)
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        do {
+            return try makeCall()
+        } catch let error as Error {
+            out_buf.pointee = FfiConverterTypeError.lower(error)
+            return UNIFFI_CALLBACK_ERROR
+        }
+    }
+
+    func `invokeGetQuorumPublicKey`(_ swiftCallbackInterface: QuorumInfoProvider, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            let result = try swiftCallbackInterface.`getQuorumPublicKey`(
+                    `height`:  try FfiConverterUInt64.read(from: &reader), 
+                    `quorumHash`:  try FfiConverterSequenceUInt8.read(from: &reader)
+                    )
+            var writer = [UInt8]()
+            FfiConverterSequenceUInt8.write(result, into: &writer)
+            out_buf.pointee = RustBuffer(bytes: writer)
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        do {
+            return try makeCall()
+        } catch let error as Error {
+            out_buf.pointee = FfiConverterTypeError.lower(error)
+            return UNIFFI_CALLBACK_ERROR
+        }
+    }
+
+
+    switch method {
+        case IDX_CALLBACK_FREE:
+            FfiConverterCallbackInterfaceQuorumInfoProvider.drop(handle: handle)
+            // Sucessful return
+            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+            return UNIFFI_CALLBACK_SUCCESS
+        case 1:
+            let cb: QuorumInfoProvider
+            do {
+                cb = try FfiConverterCallbackInterfaceQuorumInfoProvider.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("QuorumInfoProvider: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try `invokeGetQuorumType`(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        case 2:
+            let cb: QuorumInfoProvider
+            do {
+                cb = try FfiConverterCallbackInterfaceQuorumInfoProvider.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("QuorumInfoProvider: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try `invokeGetQuorumPublicKey`(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        
+        // This should never happen, because an out of bounds method index won't
+        // ever be used. Once we can catch errors, we should return an InternalError.
+        // https://github.com/mozilla/uniffi-rs/issues/351
+        default:
+            // An unexpected error happened.
+            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+    }
+}
+
+// FfiConverter protocol for callback interfaces
+fileprivate struct FfiConverterCallbackInterfaceQuorumInfoProvider {
+    private static let initCallbackOnce: () = {
+        // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
+        try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
+            uniffi_dash_drive_v0_fn_init_callback_quoruminfoprovider(foreignCallbackCallbackInterfaceQuorumInfoProvider, err)
+        }
+    }()
+
+    private static func ensureCallbackinitialized() {
+        _ = initCallbackOnce
+    }
+
+    static func drop(handle: UniFFICallbackHandle) {
+        handleMap.remove(handle: handle)
+    }
+
+    private static var handleMap = UniFFICallbackHandleMap<QuorumInfoProvider>()
+}
+
+extension FfiConverterCallbackInterfaceQuorumInfoProvider : FfiConverter {
+    typealias SwiftType = QuorumInfoProvider
+    // We can use Handle as the FfiType because it's a typealias to UInt64
+    typealias FfiType = UniFFICallbackHandle
+
+    public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
+        ensureCallbackinitialized();
+        guard let callback = handleMap.get(handle: handle) else {
+            throw UniffiInternalError.unexpectedStaleHandle
+        }
+        return callback
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        ensureCallbackinitialized();
+        let handle: UniFFICallbackHandle = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UniFFICallbackHandle {
+        ensureCallbackinitialized();
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        ensureCallbackinitialized();
+        writeInt(&buf, lower(v))
+    }
+}
 
 fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
@@ -478,12 +763,13 @@ public func `hello`()  {
 
 
 
-public func `identityProofToCbor`(`reqProto`: [UInt8], `respProto`: [UInt8]) throws -> [UInt8] {
+public func `identityProofToCbor`(`reqProto`: [UInt8], `respProto`: [UInt8], `provider`: QuorumInfoProvider) throws -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(
         try rustCallWithError(FfiConverterTypeError.lift) {
     uniffi_rs_drive_light_client_fn_func_identity_proof_to_cbor(
         FfiConverterSequenceUInt8.lower(`reqProto`),
-        FfiConverterSequenceUInt8.lower(`respProto`),$0)
+        FfiConverterSequenceUInt8.lower(`respProto`),
+        FfiConverterCallbackInterfaceQuorumInfoProvider.lower(`provider`),$0)
 }
     )
 }
@@ -506,7 +792,13 @@ private var initializationResult: InitializationResult {
     if (uniffi_rs_drive_light_client_checksum_func_hello() != 32699) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor() != 49453) {
+    if (uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor() != 26330) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type() != 29053) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key() != 43493) {
         return InitializationResult.apiChecksumMismatch
     }
 
