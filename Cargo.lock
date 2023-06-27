@@ -3361,15 +3361,19 @@ dependencies = [
 name = "rs-drive-light-client"
 version = "0.1.0"
 dependencies = [
+ "base64 0.21.2",
  "bytes",
  "camino",
  "dapi-grpc",
  "dpp",
  "drive",
+ "hex",
  "mockall",
  "prost",
  "tenderdash-abci",
  "thiserror",
+ "tracing",
+ "tracing-subscriber",
  "uniffi",
 ]
 
@@ -3985,6 +3989,7 @@ dependencies = [
 [[package]]
 name = "tenderdash-abci"
 version = "0.12.0-dev.2"
+source = "git+https://github.com/dashpay/rs-tenderdash-abci?rev=9b33518a4b25b60747993c3853c1bbf00a39e703#9b33518a4b25b60747993c3853c1bbf00a39e703"
 dependencies = [
  "bytes",
  "futures",
@@ -4004,6 +4009,7 @@ dependencies = [
 [[package]]
 name = "tenderdash-proto"
 version = "0.12.0-dev.2"
+source = "git+https://github.com/dashpay/rs-tenderdash-abci?rev=9b33518a4b25b60747993c3853c1bbf00a39e703#9b33518a4b25b60747993c3853c1bbf00a39e703"
 dependencies = [
  "bytes",
  "chrono",
@@ -4021,6 +4027,7 @@ dependencies = [
 [[package]]
 name = "tenderdash-proto-compiler"
 version = "0.1.0"
+source = "git+https://github.com/dashpay/rs-tenderdash-abci?rev=9b33518a4b25b60747993c3853c1bbf00a39e703#9b33518a4b25b60747993c3853c1bbf00a39e703"
 dependencies = [
  "fs_extra",
  "prost-build",
@@ -4420,6 +4427,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sharded-slab",
+ "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",

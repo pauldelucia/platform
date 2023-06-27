@@ -1,5 +1,5 @@
 use dapi_grpc::platform::v0::{Proof, ResponseMetadata};
-use dpp::bls_signatures;
+use dpp::{bls_signatures, dashcore::hashes::hex::ToHex};
 pub use drive::drive::verify::RootHash;
 use tenderdash_abci::{
     proto::{
@@ -81,6 +81,14 @@ pub fn verify_tenderdash_proof(
             error: e.to_string(),
         }
     })?;
+
+    tracing::trace!(
+        ?state_id,
+        signature = signature.to_hex(),
+        sign_digest = sign_digest.to_hex(),
+        ?pubkey,
+        "verify signature"
+    );
 
     match verify_signature_digest(&sign_digest, &signature, &pubkey)? {
         true => Ok(()),
