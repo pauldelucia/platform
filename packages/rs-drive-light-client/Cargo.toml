@@ -18,9 +18,12 @@ mockall = { version = "0.11", optional = true }
 
 drive = { path = "../rs-drive" }
 dpp = { path = "../rs-dpp" }
-# tenderdash-abci = { git = "https://github.com/dashpay/rs-tenderdash-abci", branch = "master" }
-tenderdash-abci = { path = "../../../rs-tenderdash-abci/abci" }
+tenderdash-abci = { git = "https://github.com/dashpay/rs-tenderdash-abci", rev = "9b33518a4b25b60747993c3853c1bbf00a39e703" }
+# tenderdash-abci = { path = "../../../rs-tenderdash-abci/abci" }
 
+[dev-dependencies]
+
+base64 = { version = "0.21.2" }
 
 [build-dependencies]
 
