@@ -1,10 +1,8 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use uniffi::TargetLanguage;
 
-pub mod proof;
-
 /// Return path to the Drive library file, containing uniffi code
-pub fn drive_library_path() -> Utf8PathBuf {
+fn drive_library_path() -> Utf8PathBuf {
     let artifacts_dir = Utf8Path::new(env!("OUT_DIR"))
         .parent()
         .expect("cannot get parent of .../out/ dir")

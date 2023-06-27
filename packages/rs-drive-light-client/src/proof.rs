@@ -1,13 +1,9 @@
 use std::fmt::Debug;
 
-use dapi_grpc::{
-    core::v0::{core_client, get_block_request::Block},
-    platform::v0::{self as platform, Proof, ResponseMetadata},
-};
+use dapi_grpc::platform::v0::{self as platform, Proof, ResponseMetadata};
 use dpp::{
     bls_signatures,
     prelude::{Identifier, Identity},
-    ProtocolError,
 };
 pub use drive::drive::verify::RootHash;
 use drive::drive::Drive;
@@ -77,18 +73,17 @@ pub trait FromProof<Req, Resp> {
 
 #[uniffi::export(callback_interface)]
 pub trait QuorumInfoProvider: Send + Sync {
-    fn get_quorum_type(&self, height: u64, quorum_hash: Vec<u8>) -> Result<u8, Error>;
-    fn get_quorum_public_key(&self, height: u64, quorum_hash: Vec<u8>) -> Result<Vec<u8>, Error>;
+    fn get_quorum_public_key(&self, quorum_hash: Vec<u8>) -> Result<Vec<u8>, Error>;
 }
 
-impl<T: QuorumInfoProvider> QuorumInfoProvider for Box<T> {
-    fn get_quorum_public_key(&self, height: u64, quorum_hash: Vec<u8>) -> Result<Vec<u8>, Error> {
-        (**self).get_quorum_public_key(height, quorum_hash)
-    }
-    fn get_quorum_type(&self, height: u64, quorum_hash: Vec<u8>) -> Result<u8, Error> {
-        (**self).get_quorum_type(height, quorum_hash)
-    }
-}
+// impl<T: QuorumInfoProvider> QuorumInfoProvider for Box<T> {
+//     fn get_quorum_public_key(&self, height: u64, quorum_hash: Vec<u8>) -> Result<Vec<u8>, Error> {
+//         (**self).get_quorum_public_key(height, quorum_hash)
+//     }
+//     fn get_quorum_type(&self, height: u64, quorum_hash: Vec<u8>) -> Result<u8, Error> {
+//         (**self).get_quorum_type(height, quorum_hash)
+//     }
+// }
 //  {
 //     fn get_quorum_public_key(&self) {
 //         self.as_ref().get_quorum_public_key()
@@ -100,11 +95,8 @@ impl<T: QuorumInfoProvider> QuorumInfoProvider for Box<T> {
 pub struct MockQuorumInfoProvider;
 
 impl QuorumInfoProvider for MockQuorumInfoProvider {
-    fn get_quorum_public_key(&self, height: u64, quorum_hash: Vec<u8>) -> Result<Vec<u8>, Error> {
+    fn get_quorum_public_key(&self, _quorum_hash: Vec<u8>) -> Result<Vec<u8>, Error> {
         Ok(vec![0u8; 32])
-    }
-    fn get_quorum_type(&self, height: u64, quorum_hash: Vec<u8>) -> Result<u8, Error> {
-        Ok(0)
     }
 }
 
@@ -143,7 +135,7 @@ impl FromProof<platform::GetIdentityRequest, platform::GetIdentityResponse> for 
         })?;
 
         // Verify Tenderdash proof
-
+        verify_tenderdash_proof(proof, mtd, &root_hash, provider)?;
         //pub struct Proof {
         //     #[prost(bytes = "vec", tag = "1")]
         //     pub grovedb_proof: ::prost::alloc::vec::Vec<u8>,
@@ -159,54 +151,54 @@ impl FromProof<platform::GetIdentityRequest, platform::GetIdentityResponse> for 
     }
 }
 
-pub fn verify_tenderdash_proof<P: QuorumInfoProvider>(
-    proof: Proof,
-    mtd: ResponseMetadata,
+pub fn verify_tenderdash_proof(
+    proof: &Proof,
+    mtd: &ResponseMetadata,
     root_hash: &[u8],
-    quorum_info_provider: P,
+    provider: Box<dyn QuorumInfoProvider>,
 ) -> Result<(), Error> {
-    // TODO fill the following
-    let chain_id = "abc";
-    let block_id_hash: Vec<u8> = vec![0u8; 32];
-    let quorum_type = 0;
-    let pubkey_bytes = [0u8; 32];
+    let block_id_hash = proof.block_id_hash.to_vec();
 
     let version = mtd.protocol_version as u64;
     let height = mtd.height as u64;
     let round = proof.round as u32;
+    let quorum_hash = TryInto::<[u8; 32]>::try_into(proof.quorum_hash.as_slice()).map_err(|e| {
+        Error::InvalidQuorum {
+            error: "invalid quorum hash size: ".to_string() + &e.to_string(),
+        }
+    })?;
+
+    // Now, lookup quorum details
+    let chain_id = mtd.chain_id.clone();
+    let quorum_type = proof.quorum_type;
+    let pubkey_bytes = provider.get_quorum_public_key(quorum_hash.to_vec())?;
 
     let state_id = StateId {
         app_version: version,
         core_chain_locked_height: mtd.core_chain_locked_height,
-        time: Some(Timestamp::from_milis(mtd.time_ms as i64)),
+        time: Some(Timestamp::from_milis(mtd.time_ms)),
         app_hash: root_hash.into(),
         height,
     };
 
     let state_id_hash = state_id
-        .sha256(chain_id, mtd.height as i64, proof.round as i32)
+        .sha256(&chain_id, mtd.height as i64, proof.round as i32)
         .expect("failed to calculate state id hash");
 
     let commit = CanonicalVote {
         r#type: SignedMsgType::Precommit.into(),
         block_id: block_id_hash,
-        chain_id: chain_id.to_string(),
+        chain_id: chain_id.clone(),
         height: mtd.height as i64,
         round: proof.round as i64,
         state_id: state_id_hash,
     };
 
-    // Now, lookup quorum details
-    let quorum_hash =
-        TryInto::<[u8; 32]>::try_into(proof.quorum_hash).map_err(|e| Error::InvalidQuorum {
-            error: "invalid quorum hash size".to_string(),
-        })?;
-
     // Verify signature
     let sign_digest = commit
         .sign_digest(
-            chain_id,
-            quorum_type,
+            &chain_id,
+            quorum_type.try_into().expect("quorum type out of range"),
             &quorum_hash,
             height as i64,
             round as i32,
@@ -215,9 +207,9 @@ pub fn verify_tenderdash_proof<P: QuorumInfoProvider>(
             error: e.to_string(),
         })?;
 
-    let signature = TryInto::<[u8; 96]>::try_into(proof.signature).map_err(|e| {
+    let signature = TryInto::<[u8; 96]>::try_into(proof.signature.as_slice()).map_err(|e| {
         Error::InvalidSignatureFormat {
-            error: "invalid signature size".to_string(),
+            error: "invalid signature size: ".to_string() + &e.to_string(),
         }
     })?;
 
