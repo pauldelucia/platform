@@ -12,7 +12,9 @@ dapi-grpc = { path = "../dapi-grpc" }
 thiserror = { version = "1.0.39" }
 prost = { version = "0.11" }
 bytes = { version = "*" }
+
 camino = { version = "1.1.4", optional = true }
+mockall = { version = "0.11", optional = true }
 
 drive = { path = "../rs-drive" }
 dpp = { path = "../rs-dpp" }
@@ -25,5 +27,6 @@ tenderdash-abci = { path = "../../../rs-tenderdash-abci/abci" }
 uniffi = { git = "https://github.com/mozilla/uniffi-rs", features = ["build"] }
 
 [features]
-default = []
+default = ["mock"]
 bindgen = ["uniffi/cli", "dep:camino"]
+mock = ["drive/mockall", "dep:mockall"]

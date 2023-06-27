@@ -22,9 +22,9 @@ macro_rules! proof_to_cbor {
         pub fn $name(
             req_proto: Vec<u8>,
             resp_proto: Vec<u8>,
-            provider: Box<dyn crate::proof::QuorumInfoProvider>,
+            provider: Box<dyn crate::proof::from_proof::QuorumInfoProvider>,
         ) -> Result<Vec<u8>, crate::Error> {
-            use crate::proof::FromProof;
+            use crate::proof::from_proof::FromProof;
             use dapi_grpc::Message;
             let request = <$req>::decode(bytes::Bytes::from(req_proto))
                 .map_err(|e| crate::Error::ProtoEncodeError {
@@ -65,6 +65,7 @@ pub fn hello() {
 
 #[cfg(test)]
 mod test {
+    #[cfg(feature = "mock")]
     #[test]
     fn test_get_identity_proof_to_cbor() {
         // let req =
@@ -74,7 +75,7 @@ mod test {
         super::identity_proof_to_cbor(
             req_proto,
             resp_proto,
-            Box::new(crate::proof::MockQuorumInfoProvider {}),
+            Box::new(crate::proof::from_proof::MockQuorumInfoProvider::new()),
         )
         .unwrap();
     }

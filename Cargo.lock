@@ -3366,6 +3366,7 @@ dependencies = [
  "dapi-grpc",
  "dpp",
  "drive",
+ "mockall",
  "prost",
  "tenderdash-abci",
  "thiserror",

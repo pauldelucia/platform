@@ -85,9 +85,6 @@ uint16_t uniffi_rs_drive_light_client_checksum_func_hello(void
 uint16_t uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor(void
     
 );
-uint16_t uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type(void
-    
-);
 uint16_t uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key(void
     
 );

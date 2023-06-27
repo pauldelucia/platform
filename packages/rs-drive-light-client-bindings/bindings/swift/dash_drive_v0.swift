@@ -348,6 +348,8 @@ public enum Error {
 
     
     
+    case NotInitialized
+    case AlreadyInitialized
     case DriveError(`error`: String)
     case ProtocolError(`error`: String)
     case EmptyResponse
@@ -381,44 +383,46 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
         
 
         
-        case 1: return .DriveError(
+        case 1: return .NotInitialized
+        case 2: return .AlreadyInitialized
+        case 3: return .DriveError(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 2: return .ProtocolError(
+        case 4: return .ProtocolError(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 3: return .EmptyResponse
-        case 4: return .EmptyResponseMetadata
-        case 5: return .EmptyResponseProof
-        case 6: return .DocumentMissingInProof
-        case 7: return .ProtoRequestDecodeError(
+        case 5: return .EmptyResponse
+        case 6: return .EmptyResponseMetadata
+        case 7: return .EmptyResponseProof
+        case 8: return .DocumentMissingInProof
+        case 9: return .ProtoRequestDecodeError(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 8: return .ProtoResponseDecodeError(
+        case 10: return .ProtoResponseDecodeError(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 9: return .ProtoEncodeError(
+        case 11: return .ProtoEncodeError(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 10: return .SignDigestFailed(
+        case 12: return .SignDigestFailed(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 11: return .SignatureVerificationError(
+        case 13: return .SignatureVerificationError(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 12: return .InvalidQuorum(
+        case 14: return .InvalidQuorum(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 13: return .InvalidSignatureFormat(
+        case 15: return .InvalidSignatureFormat(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 14: return .InvalidPublicKey(
+        case 16: return .InvalidPublicKey(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 15: return .InvalidSignature(
+        case 17: return .InvalidSignature(
             `error`: try FfiConverterString.read(from: &buf)
             )
-        case 16: return .UnexpectedCallbackError(
+        case 18: return .UnexpectedCallbackError(
             `error`: try FfiConverterString.read(from: &buf), 
             `reason`: try FfiConverterString.read(from: &buf)
             )
@@ -434,79 +438,87 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
 
         
         
-        case let .DriveError(`error`):
+        case .NotInitialized:
             writeInt(&buf, Int32(1))
+        
+        
+        case .AlreadyInitialized:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .DriveError(`error`):
+            writeInt(&buf, Int32(3))
             FfiConverterString.write(`error`, into: &buf)
             
         
         case let .ProtocolError(`error`):
-            writeInt(&buf, Int32(2))
+            writeInt(&buf, Int32(4))
             FfiConverterString.write(`error`, into: &buf)
             
         
         case .EmptyResponse:
-            writeInt(&buf, Int32(3))
-        
-        
-        case .EmptyResponseMetadata:
-            writeInt(&buf, Int32(4))
-        
-        
-        case .EmptyResponseProof:
             writeInt(&buf, Int32(5))
         
         
-        case .DocumentMissingInProof:
+        case .EmptyResponseMetadata:
             writeInt(&buf, Int32(6))
         
         
-        case let .ProtoRequestDecodeError(`error`):
+        case .EmptyResponseProof:
             writeInt(&buf, Int32(7))
-            FfiConverterString.write(`error`, into: &buf)
-            
         
-        case let .ProtoResponseDecodeError(`error`):
+        
+        case .DocumentMissingInProof:
             writeInt(&buf, Int32(8))
-            FfiConverterString.write(`error`, into: &buf)
-            
         
-        case let .ProtoEncodeError(`error`):
+        
+        case let .ProtoRequestDecodeError(`error`):
             writeInt(&buf, Int32(9))
             FfiConverterString.write(`error`, into: &buf)
             
         
-        case let .SignDigestFailed(`error`):
+        case let .ProtoResponseDecodeError(`error`):
             writeInt(&buf, Int32(10))
             FfiConverterString.write(`error`, into: &buf)
             
         
-        case let .SignatureVerificationError(`error`):
+        case let .ProtoEncodeError(`error`):
             writeInt(&buf, Int32(11))
             FfiConverterString.write(`error`, into: &buf)
             
         
-        case let .InvalidQuorum(`error`):
+        case let .SignDigestFailed(`error`):
             writeInt(&buf, Int32(12))
             FfiConverterString.write(`error`, into: &buf)
             
         
-        case let .InvalidSignatureFormat(`error`):
+        case let .SignatureVerificationError(`error`):
             writeInt(&buf, Int32(13))
             FfiConverterString.write(`error`, into: &buf)
             
         
-        case let .InvalidPublicKey(`error`):
+        case let .InvalidQuorum(`error`):
             writeInt(&buf, Int32(14))
             FfiConverterString.write(`error`, into: &buf)
             
         
-        case let .InvalidSignature(`error`):
+        case let .InvalidSignatureFormat(`error`):
             writeInt(&buf, Int32(15))
             FfiConverterString.write(`error`, into: &buf)
             
         
-        case let .UnexpectedCallbackError(`error`,`reason`):
+        case let .InvalidPublicKey(`error`):
             writeInt(&buf, Int32(16))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .InvalidSignature(`error`):
+            writeInt(&buf, Int32(17))
+            FfiConverterString.write(`error`, into: &buf)
+            
+        
+        case let .UnexpectedCallbackError(`error`,`reason`):
+            writeInt(&buf, Int32(18))
             FfiConverterString.write(`error`, into: &buf)
             FfiConverterString.write(`reason`, into: &buf)
             
@@ -587,8 +599,7 @@ private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 // Declaration and FfiConverters for QuorumInfoProvider Callback Interface
 
 public protocol QuorumInfoProvider : AnyObject {
-    func `getQuorumType`(`height`: UInt64, `quorumHash`: [UInt8]) throws -> UInt8
-    func `getQuorumPublicKey`(`height`: UInt64, `quorumHash`: [UInt8]) throws -> [UInt8]
+    func `getQuorumPublicKey`(`quorumHash`: [UInt8]) throws -> [UInt8]
     
 }
 
@@ -597,31 +608,10 @@ fileprivate let foreignCallbackCallbackInterfaceQuorumInfoProvider : ForeignCall
     { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
     
 
-    func `invokeGetQuorumType`(_ swiftCallbackInterface: QuorumInfoProvider, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-        func makeCall() throws -> Int32 {
-            let result = try swiftCallbackInterface.`getQuorumType`(
-                    `height`:  try FfiConverterUInt64.read(from: &reader), 
-                    `quorumHash`:  try FfiConverterSequenceUInt8.read(from: &reader)
-                    )
-            var writer = [UInt8]()
-            FfiConverterUInt8.write(result, into: &writer)
-            out_buf.pointee = RustBuffer(bytes: writer)
-            return UNIFFI_CALLBACK_SUCCESS
-        }
-        do {
-            return try makeCall()
-        } catch let error as Error {
-            out_buf.pointee = FfiConverterTypeError.lower(error)
-            return UNIFFI_CALLBACK_ERROR
-        }
-    }
-
     func `invokeGetQuorumPublicKey`(_ swiftCallbackInterface: QuorumInfoProvider, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
         var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
         func makeCall() throws -> Int32 {
             let result = try swiftCallbackInterface.`getQuorumPublicKey`(
-                    `height`:  try FfiConverterUInt64.read(from: &reader), 
                     `quorumHash`:  try FfiConverterSequenceUInt8.read(from: &reader)
                     )
             var writer = [UInt8]()
@@ -645,20 +635,6 @@ fileprivate let foreignCallbackCallbackInterfaceQuorumInfoProvider : ForeignCall
             // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
             return UNIFFI_CALLBACK_SUCCESS
         case 1:
-            let cb: QuorumInfoProvider
-            do {
-                cb = try FfiConverterCallbackInterfaceQuorumInfoProvider.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("QuorumInfoProvider: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try `invokeGetQuorumType`(cb, argsData, argsLen, out_buf)
-            } catch let error {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-        case 2:
             let cb: QuorumInfoProvider
             do {
                 cb = try FfiConverterCallbackInterfaceQuorumInfoProvider.lift(handle)
@@ -795,10 +771,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor() != 26330) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type() != 29053) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key() != 43493) {
+    if (uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key() != 29670) {
         return InitializationResult.apiChecksumMismatch
     }
 

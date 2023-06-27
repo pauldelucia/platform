@@ -526,9 +526,7 @@ def uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor() != 26330:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type() != 29053:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key() != 43493:
+    if lib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key() != 29670:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
@@ -578,9 +576,6 @@ _UniFFILib.uniffi_rs_drive_light_client_checksum_func_hello.restype = ctypes.c_u
 _UniFFILib.uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor.argtypes = (
 )
 _UniFFILib.uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor.restype = ctypes.c_uint16
-_UniFFILib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type.argtypes = (
-)
-_UniFFILib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type.restype = ctypes.c_uint16
 _UniFFILib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key.argtypes = (
 )
 _UniFFILib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key.restype = ctypes.c_uint16
@@ -653,6 +648,18 @@ class Error(Exception):
 UniFFITempError = Error
 
 class Error:  # type: ignore
+    class NotInitialized(UniFFITempError):
+        def __init__(self):
+            pass
+        def __repr__(self):
+            return "Error.NotInitialized({})".format(str(self))
+    UniFFITempError.NotInitialized = NotInitialized  # type: ignore
+    class AlreadyInitialized(UniFFITempError):
+        def __init__(self):
+            pass
+        def __repr__(self):
+            return "Error.AlreadyInitialized({})".format(str(self))
+    UniFFITempError.AlreadyInitialized = AlreadyInitialized  # type: ignore
     class DriveError(UniFFITempError):
         def __init__(self, error):
             super().__init__(", ".join([
@@ -797,62 +804,68 @@ class FfiConverterTypeError(FfiConverterRustBuffer):
     def read(buf):
         variant = buf.readI32()
         if variant == 1:
+            return Error.NotInitialized(
+            )
+        if variant == 2:
+            return Error.AlreadyInitialized(
+            )
+        if variant == 3:
             return Error.DriveError(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 2:
+        if variant == 4:
             return Error.ProtocolError(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 3:
+        if variant == 5:
             return Error.EmptyResponse(
             )
-        if variant == 4:
+        if variant == 6:
             return Error.EmptyResponseMetadata(
             )
-        if variant == 5:
+        if variant == 7:
             return Error.EmptyResponseProof(
             )
-        if variant == 6:
+        if variant == 8:
             return Error.DocumentMissingInProof(
             )
-        if variant == 7:
+        if variant == 9:
             return Error.ProtoRequestDecodeError(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 8:
+        if variant == 10:
             return Error.ProtoResponseDecodeError(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 9:
+        if variant == 11:
             return Error.ProtoEncodeError(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 10:
+        if variant == 12:
             return Error.SignDigestFailed(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 11:
+        if variant == 13:
             return Error.SignatureVerificationError(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 12:
+        if variant == 14:
             return Error.InvalidQuorum(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 13:
+        if variant == 15:
             return Error.InvalidSignatureFormat(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 14:
+        if variant == 16:
             return Error.InvalidPublicKey(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 15:
+        if variant == 17:
             return Error.InvalidSignature(
                 error=FfiConverterString.read(buf),
             )
-        if variant == 16:
+        if variant == 18:
             return Error.UnexpectedCallbackError(
                 error=FfiConverterString.read(buf),
                 reason=FfiConverterString.read(buf),
@@ -861,49 +874,53 @@ class FfiConverterTypeError(FfiConverterRustBuffer):
 
     @staticmethod
     def write(value, buf):
-        if isinstance(value, Error.DriveError):
+        if isinstance(value, Error.NotInitialized):
             buf.writeI32(1)
+        if isinstance(value, Error.AlreadyInitialized):
+            buf.writeI32(2)
+        if isinstance(value, Error.DriveError):
+            buf.writeI32(3)
             FfiConverterString.write(value.error, buf)
         if isinstance(value, Error.ProtocolError):
-            buf.writeI32(2)
+            buf.writeI32(4)
             FfiConverterString.write(value.error, buf)
         if isinstance(value, Error.EmptyResponse):
-            buf.writeI32(3)
-        if isinstance(value, Error.EmptyResponseMetadata):
-            buf.writeI32(4)
-        if isinstance(value, Error.EmptyResponseProof):
             buf.writeI32(5)
-        if isinstance(value, Error.DocumentMissingInProof):
+        if isinstance(value, Error.EmptyResponseMetadata):
             buf.writeI32(6)
-        if isinstance(value, Error.ProtoRequestDecodeError):
+        if isinstance(value, Error.EmptyResponseProof):
             buf.writeI32(7)
-            FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.ProtoResponseDecodeError):
+        if isinstance(value, Error.DocumentMissingInProof):
             buf.writeI32(8)
-            FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.ProtoEncodeError):
+        if isinstance(value, Error.ProtoRequestDecodeError):
             buf.writeI32(9)
             FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.SignDigestFailed):
+        if isinstance(value, Error.ProtoResponseDecodeError):
             buf.writeI32(10)
             FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.SignatureVerificationError):
+        if isinstance(value, Error.ProtoEncodeError):
             buf.writeI32(11)
             FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.InvalidQuorum):
+        if isinstance(value, Error.SignDigestFailed):
             buf.writeI32(12)
             FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.InvalidSignatureFormat):
+        if isinstance(value, Error.SignatureVerificationError):
             buf.writeI32(13)
             FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.InvalidPublicKey):
+        if isinstance(value, Error.InvalidQuorum):
             buf.writeI32(14)
             FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.InvalidSignature):
+        if isinstance(value, Error.InvalidSignatureFormat):
             buf.writeI32(15)
             FfiConverterString.write(value.error, buf)
-        if isinstance(value, Error.UnexpectedCallbackError):
+        if isinstance(value, Error.InvalidPublicKey):
             buf.writeI32(16)
+            FfiConverterString.write(value.error, buf)
+        if isinstance(value, Error.InvalidSignature):
+            buf.writeI32(17)
+            FfiConverterString.write(value.error, buf)
+        if isinstance(value, Error.UnexpectedCallbackError):
+            buf.writeI32(18)
             FfiConverterString.write(value.error, buf)
             FfiConverterString.write(value.reason, buf)
 
@@ -990,41 +1007,15 @@ class FfiConverterCallbackInterface:
 # Declaration and FfiConverters for QuorumInfoProvider Callback Interface
 
 class QuorumInfoProvider:
-    def get_quorum_type(self, height: "int",quorum_hash: "typing.List[int]"):
-        raise NotImplementedError
-
-    def get_quorum_public_key(self, height: "int",quorum_hash: "typing.List[int]"):
+    def get_quorum_public_key(self, quorum_hash: "typing.List[int]"):
         raise NotImplementedError
 
     
 
 def py_foreignCallbackCallbackInterfaceQuorumInfoProvider(handle, method, args_data, args_len, buf_ptr):
     
-    def invoke_get_quorum_type(python_callback, args_stream, buf_ptr):
-        def makeCall():return python_callback.get_quorum_type(
-                FfiConverterUInt64.read(args_stream), 
-                FfiConverterSequenceUInt8.read(args_stream)
-                )
-
-        def makeCallAndHandleReturn():
-            rval = makeCall()
-            with RustBuffer.allocWithBuilder() as builder:
-                FfiConverterUInt8.write(rval, builder)
-                buf_ptr[0] = builder.finalize()
-            return UNIFFI_CALLBACK_SUCCESS
-        try:
-            return makeCallAndHandleReturn()
-        except Error as e:
-            # Catch errors declared in the UDL file
-            with RustBuffer.allocWithBuilder() as builder:
-                FfiConverterTypeError.write(e, builder)
-                buf_ptr[0] = builder.finalize()
-            return UNIFFI_CALLBACK_ERROR
-
-    
     def invoke_get_quorum_public_key(python_callback, args_stream, buf_ptr):
         def makeCall():return python_callback.get_quorum_public_key(
-                FfiConverterUInt64.read(args_stream), 
                 FfiConverterSequenceUInt8.read(args_stream)
                 )
 
@@ -1056,20 +1047,6 @@ def py_foreignCallbackCallbackInterfaceQuorumInfoProvider(handle, method, args_d
         return UNIFFI_CALLBACK_SUCCESS
 
     if method == 1:
-        # Call the method and handle any errors
-        # See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs` for details
-        try:
-            return invoke_get_quorum_type(cb, RustBufferStream(args_data, args_len), buf_ptr)
-        except BaseException as e:
-            # Catch unexpected errors
-            try:
-                # Try to serialize the exception into a String
-                buf_ptr[0] = FfiConverterString.lower(repr(e))
-            except:
-                # If that fails, just give up
-                pass
-            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-    if method == 2:
         # Call the method and handle any errors
         # See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs` for details
         try:

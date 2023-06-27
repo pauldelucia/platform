@@ -1,3 +1,4 @@
+#[cfg(feature = "bindgen")]
 pub mod bindgen;
 pub mod bindings;
 mod error;

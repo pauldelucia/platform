@@ -386,8 +386,6 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor(
     ): Short
-    fun uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type(
-    ): Short
     fun uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key(
     ): Short
     fun ffi_dash_drive_v0_uniffi_contract_version(
@@ -413,10 +411,7 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_rs_drive_light_client_checksum_func_identity_proof_to_cbor() != 26330.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_type() != 29053.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key() != 43493.toShort()) {
+    if (lib.uniffi_rs_drive_light_client_checksum_method_quoruminfoprovider_get_quorum_public_key() != 29670.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -496,6 +491,18 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 
 sealed class Exception: Exception() {
     // Each variant is a nested class
+    
+    class NotInitialized(
+        ) : Exception() {
+        override val message
+            get() = ""
+    }
+    
+    class AlreadyInitialized(
+        ) : Exception() {
+        override val message
+            get() = ""
+    }
     
     class DriveException(
         val `error`: String
@@ -619,44 +626,46 @@ public object FfiConverterTypeError : FfiConverterRustBuffer<Exception> {
         
 
         return when(buf.getInt()) {
-            1 -> Exception.DriveException(
+            1 -> Exception.NotInitialized()
+            2 -> Exception.AlreadyInitialized()
+            3 -> Exception.DriveException(
                 FfiConverterString.read(buf),
                 )
-            2 -> Exception.ProtocolException(
+            4 -> Exception.ProtocolException(
                 FfiConverterString.read(buf),
                 )
-            3 -> Exception.EmptyResponse()
-            4 -> Exception.EmptyResponseMetadata()
-            5 -> Exception.EmptyResponseProof()
-            6 -> Exception.DocumentMissingInProof()
-            7 -> Exception.ProtoRequestDecodeException(
+            5 -> Exception.EmptyResponse()
+            6 -> Exception.EmptyResponseMetadata()
+            7 -> Exception.EmptyResponseProof()
+            8 -> Exception.DocumentMissingInProof()
+            9 -> Exception.ProtoRequestDecodeException(
                 FfiConverterString.read(buf),
                 )
-            8 -> Exception.ProtoResponseDecodeException(
+            10 -> Exception.ProtoResponseDecodeException(
                 FfiConverterString.read(buf),
                 )
-            9 -> Exception.ProtoEncodeException(
+            11 -> Exception.ProtoEncodeException(
                 FfiConverterString.read(buf),
                 )
-            10 -> Exception.SignDigestFailed(
+            12 -> Exception.SignDigestFailed(
                 FfiConverterString.read(buf),
                 )
-            11 -> Exception.SignatureVerificationException(
+            13 -> Exception.SignatureVerificationException(
                 FfiConverterString.read(buf),
                 )
-            12 -> Exception.InvalidQuorum(
+            14 -> Exception.InvalidQuorum(
                 FfiConverterString.read(buf),
                 )
-            13 -> Exception.InvalidSignatureFormat(
+            15 -> Exception.InvalidSignatureFormat(
                 FfiConverterString.read(buf),
                 )
-            14 -> Exception.InvalidPublicKey(
+            16 -> Exception.InvalidPublicKey(
                 FfiConverterString.read(buf),
                 )
-            15 -> Exception.InvalidSignature(
+            17 -> Exception.InvalidSignature(
                 FfiConverterString.read(buf),
                 )
-            16 -> Exception.UnexpectedCallbackException(
+            18 -> Exception.UnexpectedCallbackException(
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 )
@@ -666,6 +675,14 @@ public object FfiConverterTypeError : FfiConverterRustBuffer<Exception> {
 
     override fun allocationSize(value: Exception): Int {
         return when(value) {
+            is Exception.NotInitialized -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4
+            )
+            is Exception.AlreadyInitialized -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4
+            )
             is Exception.DriveException -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4
@@ -748,79 +765,87 @@ public object FfiConverterTypeError : FfiConverterRustBuffer<Exception> {
 
     override fun write(value: Exception, buf: ByteBuffer) {
         when(value) {
-            is Exception.DriveException -> {
+            is Exception.NotInitialized -> {
                 buf.putInt(1)
+                Unit
+            }
+            is Exception.AlreadyInitialized -> {
+                buf.putInt(2)
+                Unit
+            }
+            is Exception.DriveException -> {
+                buf.putInt(3)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
             is Exception.ProtocolException -> {
-                buf.putInt(2)
+                buf.putInt(4)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
             is Exception.EmptyResponse -> {
-                buf.putInt(3)
-                Unit
-            }
-            is Exception.EmptyResponseMetadata -> {
-                buf.putInt(4)
-                Unit
-            }
-            is Exception.EmptyResponseProof -> {
                 buf.putInt(5)
                 Unit
             }
-            is Exception.DocumentMissingInProof -> {
+            is Exception.EmptyResponseMetadata -> {
                 buf.putInt(6)
                 Unit
             }
-            is Exception.ProtoRequestDecodeException -> {
+            is Exception.EmptyResponseProof -> {
                 buf.putInt(7)
-                FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.ProtoResponseDecodeException -> {
+            is Exception.DocumentMissingInProof -> {
                 buf.putInt(8)
-                FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.ProtoEncodeException -> {
+            is Exception.ProtoRequestDecodeException -> {
                 buf.putInt(9)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.SignDigestFailed -> {
+            is Exception.ProtoResponseDecodeException -> {
                 buf.putInt(10)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.SignatureVerificationException -> {
+            is Exception.ProtoEncodeException -> {
                 buf.putInt(11)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.InvalidQuorum -> {
+            is Exception.SignDigestFailed -> {
                 buf.putInt(12)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.InvalidSignatureFormat -> {
+            is Exception.SignatureVerificationException -> {
                 buf.putInt(13)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.InvalidPublicKey -> {
+            is Exception.InvalidQuorum -> {
                 buf.putInt(14)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.InvalidSignature -> {
+            is Exception.InvalidSignatureFormat -> {
                 buf.putInt(15)
                 FfiConverterString.write(value.`error`, buf)
                 Unit
             }
-            is Exception.UnexpectedCallbackException -> {
+            is Exception.InvalidPublicKey -> {
                 buf.putInt(16)
+                FfiConverterString.write(value.`error`, buf)
+                Unit
+            }
+            is Exception.InvalidSignature -> {
+                buf.putInt(17)
+                FfiConverterString.write(value.`error`, buf)
+                Unit
+            }
+            is Exception.UnexpectedCallbackException -> {
+                buf.putInt(18)
                 FfiConverterString.write(value.`error`, buf)
                 FfiConverterString.write(value.`reason`, buf)
                 Unit
@@ -915,8 +940,7 @@ public abstract class FfiConverterCallbackInterface<CallbackInterface>(
 // Declaration and FfiConverters for QuorumInfoProvider Callback Interface
 
 public interface QuorumInfoProvider {
-    fun `getQuorumType`(`height`: ULong, `quorumHash`: List<UByte>): UByte
-    fun `getQuorumPublicKey`(`height`: ULong, `quorumHash`: List<UByte>): List<UByte>
+    fun `getQuorumPublicKey`(`quorumHash`: List<UByte>): List<UByte>
     
 }
 
@@ -933,22 +957,6 @@ internal class ForeignCallbackTypeQuorumInfoProvider : ForeignCallback {
                 UNIFFI_CALLBACK_SUCCESS
             }
             1 -> {
-                // Call the method, write to outBuf and return a status code
-                // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs` for info
-                try {
-                    this.`invokeGetQuorumType`(cb, argsData, argsLen, outBuf)
-                } catch (e: Throwable) {
-                    // Unexpected error
-                    try {
-                        // Try to serialize the error into a string
-                        outBuf.setValue(FfiConverterString.lower(e.toString()))
-                    } catch (e: Throwable) {
-                        // If that fails, then it's time to give up and just return
-                    }
-                    UNIFFI_CALLBACK_UNEXPECTED_ERROR
-                }
-            }
-            2 -> {
                 // Call the method, write to outBuf and return a status code
                 // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs` for info
                 try {
@@ -981,40 +989,12 @@ internal class ForeignCallbackTypeQuorumInfoProvider : ForeignCallback {
 
     
     @Suppress("UNUSED_PARAMETER")
-    private fun `invokeGetQuorumType`(kotlinCallbackInterface: QuorumInfoProvider, argsData: Pointer, argsLen: Int, outBuf: RustBufferByReference): Int {
-        val argsBuf = argsData.getByteBuffer(0, argsLen.toLong()).also {
-            it.order(ByteOrder.BIG_ENDIAN)
-        }
-        fun makeCall() : Int {
-            val returnValue = kotlinCallbackInterface.`getQuorumType`(
-                FfiConverterULong.read(argsBuf)
-                , 
-                FfiConverterSequenceUByte.read(argsBuf)
-                
-            )
-            outBuf.setValue(FfiConverterUByte.lowerIntoRustBuffer(returnValue))
-            return UNIFFI_CALLBACK_SUCCESS
-        }
-        fun makeCallAndHandleError()  : Int = try {
-            makeCall()
-        } catch (e: Exception) {
-            // Expected error, serialize it into outBuf
-            outBuf.setValue(FfiConverterTypeError.lowerIntoRustBuffer(e))
-            UNIFFI_CALLBACK_ERROR
-        }
-
-        return makeCallAndHandleError()
-    }
-    
-    @Suppress("UNUSED_PARAMETER")
     private fun `invokeGetQuorumPublicKey`(kotlinCallbackInterface: QuorumInfoProvider, argsData: Pointer, argsLen: Int, outBuf: RustBufferByReference): Int {
         val argsBuf = argsData.getByteBuffer(0, argsLen.toLong()).also {
             it.order(ByteOrder.BIG_ENDIAN)
         }
         fun makeCall() : Int {
             val returnValue = kotlinCallbackInterface.`getQuorumPublicKey`(
-                FfiConverterULong.read(argsBuf)
-                , 
                 FfiConverterSequenceUByte.read(argsBuf)
                 
             )
