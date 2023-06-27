@@ -140,9 +140,9 @@ mod test {
             metadata: Some(
                 ResponseMetadata { height:23,
                         core_chain_locked_height:1553,
-                        time_ms:1687871674372, // TODO: we fail here due to time resolution not good enough
+                        time_ms:1687871674372, // TODO: should be 2023-06-27T13:14:34.372422898Z but this requires nanos
                         protocol_version: 1,
-                        chain_id:"devnet".to_string() 
+                        chain_id:"dashmate_local_44".to_string() 
                 }
             ),
             result: Some(platform::get_identity_response::Result::Proof(
@@ -156,6 +156,7 @@ mod test {
                 }
             ))
         };
+
         let mut provider = MockQuorumInfoProvider::new();
         provider
             .expect_get_quorum_public_key()
