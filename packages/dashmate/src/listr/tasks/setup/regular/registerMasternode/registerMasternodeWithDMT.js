@@ -3,12 +3,15 @@ const BlsSignatures = require('@dashevo/bls');
 const createPlatformNodeKeyInput = require('../../../../prompts/createPlatformNodeKeyInput');
 const createIpAndPortsForm = require('../../../../prompts/createIpAndPortsForm');
 const validateBLSPrivateKeyFactory = require('../../../../prompts/validators/validateBLSPrivateKeyFactory');
+const PortStatusEnum = require('../../../../../status/enums/portState');
+const providers = require('../../../../../status/providers');
 
 /**
  * Print prompts to collect masternode registration data with DMT
  *
  * @param {Context} ctx
  * @param {TaskWrapper} task
+ * @param {createPortIsNotReachableForm} createPortIsNotReachableForm
  * @returns {Promise<{
  *   ipAndPorts: {
  *      platformP2PPort: null,
@@ -22,7 +25,7 @@ const validateBLSPrivateKeyFactory = require('../../../../prompts/validators/val
  *   platformNodeKey: null
  * }>}
  */
-async function registerMasternodeWithDMT(ctx, task) {
+async function registerMasternodeWithDMT(ctx, task, createPortIsNotReachableForm) {
   const blsSignatures = await BlsSignatures();
   const validateBLSPrivateKey = validateBLSPrivateKeyFactory(blsSignatures);
 
