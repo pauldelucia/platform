@@ -30,7 +30,7 @@ async function registerMasternodeWithDMT(ctx, task) {
     {
       type: 'confirm',
       header: `  Complete initial DMT setup and return here to continue:
-    
+
     See https://docs.dash.org/dmt-setup for instructions on using Dash Masternode Tool
     to store your collateral and register your masternode.\n`,
       message: 'Press any key to continue dashmate setup process...',
@@ -66,6 +66,18 @@ async function registerMasternodeWithDMT(ctx, task) {
   }));
 
   const state = await task.prompt(prompts);
+
+  const portStatus = await providers.mnowatch.checkPortStatus(state.ipAndPorts.coreP2PPort);
+
+  if (portStatus !== PortStatusEnum.OPEN) {
+    const confirmed = await task.prompt(
+      await createPortIsNotReachableForm(state.ipAndPorts.coreP2PPort),
+    );
+
+    if (!confirmed) {
+      throw new Error('Operation is cancelled');
+    }
+  }
 
   // Keep compatibility with other registration methods
   state.operator = {
