@@ -55,7 +55,10 @@ function getMasternodeScopeFactory(dockerCompose, createRpcClient, getConnection
     const { blocks: coreBlocks } = blockchainInfo.result;
 
     const countInfo = masternodeCount.result;
-    const { enabled } = countInfo;
+    const { detailed, enabled, total } = countInfo;
+    const {regular, hpmn} = detailed
+    const {enabled: enabledHpmn, total: totalHpmn} = hpmn
+    const {enabled: enabledRegular, total: totalRegular} = regular
 
     const { state, status, proTxHash } = masternodeStatus.result;
 
@@ -76,7 +79,11 @@ function getMasternodeScopeFactory(dockerCompose, createRpcClient, getConnection
       info.nodeState.poSePenalty = poSePenalty;
       info.nodeState.lastPaidHeight = lastPaidHeight;
       info.nodeState.lastPaidTime = lastPaidTime;
-      info.nodeState.enabledCount = enabled;
+      info.nodeState.totalCount = total;
+      info.nodeState.totalRegularCount = totalRegular;
+      info.nodeState.enabledRegularCount = enabledRegular;
+      info.nodeState.totalHpmnCount = totalHpmn;
+      info.nodeState.enabledHpmnCount = enabledHpmn;
       info.nodeState.paymentQueuePosition = paymentQueuePosition;
       info.nodeState.nextPaymentTime = nextPaymentTime;
     }

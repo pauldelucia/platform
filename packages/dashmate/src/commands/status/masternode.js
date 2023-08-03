@@ -36,7 +36,9 @@ class MasternodeStatusCommand extends ConfigBaseCommand {
       'PoSe Penalty': 'n/a',
       'Last paid block': 'n/a',
       'Last paid time': 'n/a',
-      'Enabled count': 'n/a',
+      'Total count': 'n/a',
+      'HPMN count': 'n/a',
+      'Regular count': 'n/a',
       'Payment queue position': 'n/a',
       'Next payment time': 'n/a',
     };
@@ -67,7 +69,10 @@ class MasternodeStatusCommand extends ConfigBaseCommand {
         const {
           lastPaidHeight, lastPaidTime,
           paymentQueuePosition, nextPaymentTime,
-          poSePenalty, enabledCount,
+          poSePenalty,
+          totalCount, enabledCount,
+          totalHpmnCount, enabledHpmnCount,
+          totalRegularCount, enabledRegularCount
         } = scope.nodeState;
 
         plain['ProTx Hash'] = scope.proTxHash || 'n/a';
@@ -76,7 +81,9 @@ class MasternodeStatusCommand extends ConfigBaseCommand {
         plain['Last paid time'] = lastPaidHeight === 0 ? 'Never' : (lastPaidTime || 'n/a');
         plain['Payment queue position'] = paymentQueuePosition || 'n/a';
         plain['Next payment time'] = `in ${nextPaymentTime}` || 'n/a';
-        plain['Enabled count'] = enabledCount || 'n/a';
+        plain['Total count'] = `${totalCount} / ${enabledCount}` || 'n/a';
+        plain['HPMN count'] = `${totalHpmnCount} / ${enabledHpmnCount}` || 'n/a';
+        plain['Regular count'] = `${totalRegularCount} / ${enabledRegularCount}` || 'n/a';
       }
 
       return printObject(plain, flags.format);
