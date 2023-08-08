@@ -1,4 +1,3 @@
-use crate::error::execution::ExecutionError;
 use crate::error::Error;
 use crate::execution::validation::state_transition::documents_batch::data_triggers::{
     DataTriggerExecutionContext, DataTriggerExecutionResult,
