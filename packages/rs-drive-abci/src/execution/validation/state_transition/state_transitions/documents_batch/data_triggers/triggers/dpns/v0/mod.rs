@@ -1,3 +1,5 @@
+mod voting_trigger;
+
 use dpp::consensus::state::data_trigger::data_trigger_condition_error::DataTriggerConditionError;
 ///! The `dpns_triggers` module contains data triggers specific to the DPNS data contract.
 use dpp::util::hash::hash;
