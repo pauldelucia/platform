@@ -127,7 +127,7 @@ mod test {
             .expect("should return a platform version");
 
         let mut domain_document =
-            get_dpns_parent_document_fixture(ParentDocumentOptions::default(), 0);
+            get_dpns_parent_document_fixture(ParentDocumentOptions::default(), platform_version.protocol_version);
         domain_document.set(
             super::property_names::CORE_HEIGHT_CREATED_AT,
             platform_value!(10u32),
@@ -155,7 +155,7 @@ mod test {
             .as_transition_create()
             .expect("expected a document create transition");
 
-        let data_contract = get_dpns_data_contract_fixture(None, 0);
+        let data_contract = get_dpns_data_contract_fixture(None, platform_version.protocol_version);
 
         let transition_execution_context =
             StateTransitionExecutionContext::default_for_platform_version(platform_version)
@@ -186,7 +186,7 @@ mod test {
         match data_trigger_error {
             DataTriggerError::DataTriggerExecutionError(e) => {
                 let message = e.message();
-                assert_eq!(message, "vote bla bla");
+                assert_eq!(message, "Not enough votes to register a name");
             }
             _ => {
                 panic!("Expected DataTriggerExecutionError");
@@ -232,7 +232,7 @@ mod test {
         };
 
         let mut domain_document =
-            get_dpns_parent_document_fixture(ParentDocumentOptions::default(), 0);
+            get_dpns_parent_document_fixture(ParentDocumentOptions::default(), platform_version.protocol_version);
         domain_document.set(
             super::property_names::CORE_HEIGHT_CREATED_AT,
             platform_value!(10u32),
@@ -260,7 +260,7 @@ mod test {
             .as_transition_create()
             .expect("expected a document create transition");
 
-        let data_contract = get_dpns_data_contract_fixture(None, 0);
+        let data_contract = get_dpns_data_contract_fixture(None, platform_version.protocol_version);
 
         let transition_execution_context =
             StateTransitionExecutionContext::default_for_platform_version(platform_version)
@@ -310,7 +310,7 @@ mod test {
             .expect("should return a platform version");
 
         let (mut preorder_document, preorder_salt) =
-            get_dpns_preorder_document_fixture(ParentDocumentOptions::default(), 0);
+            get_dpns_preorder_document_fixture(ParentDocumentOptions::default(), platform_version.protocol_version);
         preorder_document.set(
             super::property_names::CORE_HEIGHT_CREATED_AT,
             platform_value!(10u32),
@@ -338,7 +338,7 @@ mod test {
             .as_transition_create()
             .expect("expected a document create transition");
 
-        let data_contract = get_dpns_data_contract_fixture(None, 0);
+        let data_contract = get_dpns_data_contract_fixture(None, platform_version.protocol_version);
 
         let transition_execution_context =
             StateTransitionExecutionContext::default_for_platform_version(platform_version)
