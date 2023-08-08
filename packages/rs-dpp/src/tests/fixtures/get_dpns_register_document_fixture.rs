@@ -17,8 +17,7 @@ pub fn get_dpns_preorder_document_fixture(
     let data_contract = get_dpns_data_contract_fixture(Some(options.owner_id), LATEST_VERSION);
 
     let document_factory =
-        DocumentFactory::new(LATEST_VERSION, data_contract.data_contract_owned());
-    let data_contract = get_dpns_data_contract_fixture(Some(options.owner_id), LATEST_VERSION);
+        DocumentFactory::new(LATEST_VERSION, data_contract.data_contract_owned()).expect("expected to get document factory");
     let mut pre_order_salt = [0u8; 32];
     let _ = getrandom(&mut pre_order_salt);
 
@@ -32,8 +31,7 @@ pub fn get_dpns_preorder_document_fixture(
 
     (
         document_factory
-            .create_extended_document_for_state_transition(
-                data_contract.data_contract,
+            .create_extended_document(
                 options.owner_id,
                 String::from("preorder"),
                 map.into(),

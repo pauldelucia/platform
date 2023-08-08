@@ -11,7 +11,7 @@ use dpp::system_data_contracts::feature_flags_contract::document_types::update_c
 use dpp::system_data_contracts::withdrawals_contract::document_types::withdrawal;
 use dpp::system_data_contracts::{dashpay_contract, dpns_contract, SystemDataContract};
 use drive::state_transition_action::document::documents_batch::document_transition::{
-    DocumentTransitionAction, DocumentTransitionActionType,
+    DocumentTransitionActionType,
 };
 
 /// Retrieves a list of data triggers binding with matching params.
