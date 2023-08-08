@@ -2,19 +2,21 @@ use std::collections::BTreeMap;
 
 use getrandom::getrandom;
 use platform_value::Value;
+use crate::document::Document;
 
 use crate::document::document_factory::DocumentFactory;
+#[cfg(feature = "extended-document")]
 use crate::document::ExtendedDocument;
 use crate::tests::fixtures::ParentDocumentOptions;
 use crate::util::hash::hash;
 
 use super::get_dpns_data_contract_fixture;
 
-#[cfg(feature = "extended-document")]
+// #[cfg(feature = "extended-document")]
 pub fn get_dpns_preorder_document_fixture(
     options: ParentDocumentOptions,
     protocol_version: u32,
-) -> (ExtendedDocument, [u8; 32]) {
+) -> (Document, [u8; 32]) {
     let data_contract = get_dpns_data_contract_fixture(Some(options.owner_id), protocol_version);
 
     let document_factory =
@@ -33,7 +35,7 @@ pub fn get_dpns_preorder_document_fixture(
 
     (
         document_factory
-            .create_extended_document(options.owner_id, String::from("preorder"), map.into())
+            .create_document(options.owner_id, String::from("preorder"), map.into())
             .expect("DPNS preorder document should be created"),
         pre_order_salt,
     )

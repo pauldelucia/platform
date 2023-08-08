@@ -5,13 +5,12 @@ use crate::execution::validation::state_transition::documents_batch::data_trigge
 use crate::platform_types::platform::PlatformStateRef;
 use crate::platform_types::platform_state::v0::PlatformStateV0Methods;
 use dpp::block::epoch::Epoch;
-use dpp::consensus::ConsensusError;
 use dpp::consensus::state::data_trigger::data_trigger_execution_error::DataTriggerExecutionError;
 use dpp::consensus::state::data_trigger::DataTriggerError;
-use dpp::consensus::state::state_error::StateError;
 use dpp::platform_value::btreemap_extensions::BTreeValueMapHelper;
 use dpp::platform_value::Identifier;
 use drive::state_transition_action::document::documents_batch::document_transition::document_base_transition_action::DocumentBaseTransitionActionAccessorsV0;
+use drive::state_transition_action::document::documents_batch::document_transition::document_create_transition_action::DocumentCreateTransitionActionAccessorsV0;
 use drive::state_transition_action::document::documents_batch::document_transition::DocumentTransitionAction;
 
 const BLOCKS_SIZE_WINDOW: u32 = 8;
@@ -51,7 +50,7 @@ pub fn run_name_register_trigger(
 
     // TODO: I guess preorders can be created, it's the actual domain document that needs to be
     //  voted on
-    if document_create_action.base.document_type_name != "domain" {
+    if document_create_action.base().document_type_name() != "domain" {
         // Not a name registration document.
         return Ok(data_trigger_execution_result);
     };
@@ -61,12 +60,10 @@ pub fn run_name_register_trigger(
     println!("document_create_action: {:?}", document_create_action);
 
     if !enough_votes {
-        let err = ConsensusError::StateError(StateError::DataTriggerError(
-            DataTriggerError::DataTriggerExecutionError(DataTriggerExecutionError::new(
-                document_transition.base().data_contract_id().clone(),
-                document_transition.base().id(),
-                "Not enough votes to register a name".to_string(),
-            )),
+        let err = DataTriggerError::DataTriggerExecutionError(DataTriggerExecutionError::new(
+            document_transition.base().data_contract_id().clone(),
+            document_transition.base().id(),
+            "Not enough votes to register a name".to_string(),
         ));
 
         data_trigger_execution_result.add_error(err);
