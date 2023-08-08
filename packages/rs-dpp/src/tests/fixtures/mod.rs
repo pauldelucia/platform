@@ -17,6 +17,7 @@ pub use identity_fixture::*;
 #[cfg(feature = "state-transitions")]
 pub use identity_topup_transition_fixture::*;
 pub use instant_asset_lock_proof_fixture::*;
+pub use get_dpns_register_document_fixture::*;
 
 #[cfg(feature = "state-transitions")]
 mod identity_create_transition_fixture;

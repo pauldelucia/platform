@@ -10,6 +10,7 @@ use crate::{document::document_factory::DocumentFactory, version::LATEST_VERSION
 
 use super::get_dpns_data_contract_fixture;
 
+#[cfg(feature = "extended-document")]
 pub fn get_dpns_preorder_document_fixture(
     options: ParentDocumentOptions,
 ) -> (ExtendedDocument, [u8; 32]) {
