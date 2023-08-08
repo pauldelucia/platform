@@ -29,7 +29,7 @@ impl PlatformStateRef<'_> {
 }
 
 /// Runs the name register trigger.
-pub fn run_name_register_trigger(
+pub fn run_name_register_trigger_v0(
     document_transition: &DocumentTransitionAction,
     context: &DataTriggerExecutionContext<'_>,
     _: Option<&Identifier>,
@@ -75,6 +75,7 @@ pub fn run_name_register_trigger(
 #[cfg(test)]
 mod test {
     use std::ops::Deref;
+    use std::sync::Arc;
     use crate::platform_types::platform::PlatformStateRef;
     use crate::test::helpers::setup::TestPlatformBuilder;
     use dpp::block::block_info::{BlockInfo};
@@ -89,10 +90,11 @@ mod test {
     use dpp::state_transition::documents_batch_transition::document_transition::action_type::DocumentTransitionActionType;
     use dpp::tests::fixtures::{get_document_transitions_fixture, get_dpns_data_contract_fixture, get_dpns_parent_document_fixture, get_dpns_preorder_document_fixture, ParentDocumentOptions};
     use dpp::version::{DefaultForPlatformVersion, TryIntoPlatformVersioned};
+    use drive::drive::contract::DataContractFetchInfo;
     use drive::state_transition_action::document::documents_batch::document_transition::document_create_transition_action::DocumentCreateTransitionAction;
     use crate::execution::types::state_transition_execution_context::StateTransitionExecutionContext;
     use crate::execution::validation::state_transition::documents_batch::data_triggers::DataTriggerExecutionContext;
-    use crate::execution::validation::state_transition::documents_batch::data_triggers::triggers::dpns::v0::voting_trigger::run_name_register_trigger;
+    use crate::execution::validation::state_transition::documents_batch::data_triggers::triggers::dpns::v0::voting_trigger::run_name_register_trigger_v0;
     use crate::platform_types::platform_state::v0::PlatformStateV0Methods;
 
     #[test]
@@ -168,13 +170,11 @@ mod test {
 
         // transition_execution_context.enable_dry_run();
 
-        let result = run_name_register_trigger(
-            &DocumentCreateTransitionAction::from(
-                document_create_transition
-                    .try_into_platform_versioned(platform_version)
-                    .expect("expected to produce a state transition action"),
-            )
-            .into(),
+        let result = run_name_register_trigger_v0(
+            &DocumentCreateTransitionAction::from_document_borrowed_create_transition_with_contract_lookup(
+                document_create_transition,|identifier| {
+                    Ok(Arc::new(DataContractFetchInfo::dpns_contract_fixture(platform_version.protocol_version)))
+                }).expect("expected to create action").into(),
             &data_trigger_context,
             None,
         )
@@ -201,9 +201,10 @@ mod test {
             .set_initial_state_structure();
 
         {
-            let mut state_guard = platform.state.write().unwrap().v0_mut().unwrap();
+            let mut state_guard = platform.state.write().unwrap();
+            let mut state_ref = state_guard.v0_mut().unwrap();
 
-            state_guard.last_committed_block_info =
+            state_ref.last_committed_block_info =
                 Some(ExtendedBlockInfo::V0(ExtendedBlockInfoV0 {
                     basic_info: BlockInfo {
                         time_ms: 500000,
@@ -279,13 +280,11 @@ mod test {
             _ => panic!("Expected to be v0"),
         };
 
-        let result = run_name_register_trigger(
-            &DocumentCreateTransitionAction::from(
-                document_create_transition
-                    .try_into_platform_versioned(platform_version)
-                    .expect("expected to produce a state transition action"),
-            )
-            .into(),
+        let result = run_name_register_trigger_v0(
+            &DocumentCreateTransitionAction::from_document_borrowed_create_transition_with_contract_lookup(
+                document_create_transition,|identifier| {
+                    Ok(Arc::new(DataContractFetchInfo::dpns_contract_fixture(platform_version.protocol_version)))
+                }).expect("expected to create action").into(),
             &data_trigger_context,
             None,
         )
@@ -354,13 +353,11 @@ mod test {
 
         // transition_execution_context.enable_dry_run();
 
-        let result = run_name_register_trigger(
-            &DocumentCreateTransitionAction::from(
-                document_create_transition
-                    .try_into_platform_versioned(platform_version)
-                    .expect("expected to produce a state transition action"),
-            )
-            .into(),
+        let result = run_name_register_trigger_v0(
+            &DocumentCreateTransitionAction::from_document_borrowed_create_transition_with_contract_lookup(
+                document_create_transition,|identifier| {
+                    Ok(Arc::new(DataContractFetchInfo::dpns_contract_fixture(platform_version.protocol_version)))
+                }).expect("expected to create action").into(),
             &data_trigger_context,
             None,
         )
