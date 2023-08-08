@@ -44,3 +44,4 @@ mod identity_credit_withdrawal_transition_fixture;
 mod identity_fixture;
 #[cfg(feature = "state-transitions")]
 mod identity_topup_transition_fixture;
+mod get_dpns_register_document_fixture;
