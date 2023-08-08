@@ -4,6 +4,7 @@ use dpp::block::epoch::Epoch;
 use dpp::platform_value::btreemap_extensions::BTreeValueMapHelper;
 use dpp::platform_value::Identifier;
 use drive::state_transition_action::document::documents_batch::document_transition::DocumentTransitionAction;
+use crate::error::execution::ExecutionError;
 use crate::execution::validation::state_transition::documents_batch::data_triggers::{DataTriggerExecutionContext, DataTriggerExecutionResult};
 use crate::platform_types::platform_state::v0::PlatformStateV0Methods;
 
@@ -52,14 +53,9 @@ pub fn run_name_register_trigger(
     println!("document_create_action: {:?}", document_create_action);
 
     // Check votes here
-    data_trigger_execution_result.add_error(DataTriggerActionError::DataTriggerExecutionError {
-        data_contract_id: context.data_contract.id.clone(),
-        document_transition_id: document_create_action.base.id.clone(),
-        message: "Vote didn't happen".to_string(),
-        execution_error: "Vote didn't happen".to_string(),
-        document_transition: Some(document_transition.clone()),
-        owner_id: None,
-    });
+    data_trigger_execution_result.add_error(ExecutionError::DataTriggerExecutionError(
+        "Name registration trigger not implemented yet".to_string(),
+    ));
 
     Ok(data_trigger_execution_result)
 }
@@ -77,12 +73,9 @@ mod test {
     use dpp::platform_value::platform_value;
     use dpp::state_transition::documents_batch_transition::document_create_transition::DocumentCreateTransition;
     use dpp::state_transition::documents_batch_transition::document_transition::action_type::DocumentTransitionActionType;
-    use dpp::tests::fixtures::{
-        get_document_transitions_fixture, get_dpns_data_contract_fixture,
-        get_dpns_parent_document_fixture,
-        ParentDocumentOptions,
-    };
+    use dpp::tests::fixtures::{get_document_transitions_fixture, get_dpns_data_contract_fixture, get_dpns_parent_document_fixture, get_dpns_preorder_document_fixture, ParentDocumentOptions};
     use drive::state_transition_action::document::documents_batch::document_transition::document_create_transition_action::DocumentCreateTransitionAction;
+    use crate::error::execution::ExecutionError;
     use crate::execution::types::state_transition_execution_context::StateTransitionExecutionContext;
     use crate::execution::validation::state_transition::documents_batch::data_triggers::DataTriggerExecutionContext;
     use crate::execution::validation::state_transition::documents_batch::data_triggers::triggers::dpns::v0::voting_trigger::run_name_register_trigger;
@@ -113,7 +106,7 @@ mod test {
         };
 
         let mut domain_document =
-            get_dpns_parent_document_fixture(ParentDocumentOptions::default());
+            get_dpns_parent_document_fixture(ParentDocumentOptions::default(), 0);
         domain_document
             .set(
                 super::property_names::CORE_HEIGHT_CREATED_AT,
@@ -123,7 +116,7 @@ mod test {
         let owner_id = &domain_document.owner_id();
 
         let document_transitions =
-            get_document_transitions_fixture([(Action::Create, vec![domain_document])]);
+            get_document_transitions_fixture([(DocumentTransitionActionType::Create, vec![domain_document])]);
         let document_transition = document_transitions
             .get(0)
             .expect("document transition should be present");
@@ -132,7 +125,7 @@ mod test {
             .as_transition_create()
             .expect("expected a document create transition");
 
-        let data_contract = get_dpns_data_contract_fixture(None);
+        let data_contract = get_dpns_data_contract_fixture(None, 0);
 
         let transition_execution_context = StateTransitionExecutionContext::default();
 
@@ -156,7 +149,7 @@ mod test {
 
         let data_trigger_error = &result.errors[0];
         match data_trigger_error {
-            DataTriggerActionError::DataTriggerExecutionError { message, .. } => {
+            ExecutionError::DataTriggerExecutionError(message) => {
                 assert_eq!(message, "Vote didn't happen");
             }
             _ => {
@@ -197,7 +190,7 @@ mod test {
         };
 
         let mut domain_document =
-            get_dpns_parent_document_fixture(ParentDocumentOptions::default());
+            get_dpns_parent_document_fixture(ParentDocumentOptions::default(), 0);
         domain_document
             .set(
                 super::property_names::CORE_HEIGHT_CREATED_AT,
@@ -216,7 +209,7 @@ mod test {
             .as_transition_create()
             .expect("expected a document create transition");
 
-        let data_contract = get_dpns_data_contract_fixture(None);
+        let data_contract = get_dpns_data_contract_fixture(None, 0);
 
         let transition_execution_context = StateTransitionExecutionContext::default();
 
@@ -258,7 +251,7 @@ mod test {
         };
 
         let (mut preorder_document, preorder_salt) =
-            get_dpns_preorder_document_fixture(ParentDocumentOptions::default());
+            get_dpns_preorder_document_fixture(ParentDocumentOptions::default(), 0);
         preorder_document
             .set(
                 super::property_names::CORE_HEIGHT_CREATED_AT,
@@ -268,7 +261,7 @@ mod test {
         let owner_id = &preorder_document.owner_id();
 
         let document_transitions =
-            get_document_transitions_fixture([(Action::Create, vec![preorder_document])]);
+            get_document_transitions_fixture([(DocumentTransitionActionType::Create, vec![preorder_document])]);
         let document_transition = document_transitions
             .get(0)
             .expect("document transition should be present");
@@ -277,7 +270,7 @@ mod test {
             .as_transition_create()
             .expect("expected a document create transition");
 
-        let data_contract = get_dpns_data_contract_fixture(None);
+        let data_contract = get_dpns_data_contract_fixture(None, 0);
 
         let transition_execution_context = StateTransitionExecutionContext::default();
 
