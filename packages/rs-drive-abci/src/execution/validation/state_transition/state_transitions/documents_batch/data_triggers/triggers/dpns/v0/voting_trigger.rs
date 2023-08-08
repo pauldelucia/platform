@@ -36,7 +36,7 @@ pub fn run_name_register_trigger(
 ) -> Result<DataTriggerExecutionResult, Error> {
     let mut data_trigger_execution_result = DataTriggerExecutionResult::default();
 
-    let current_epoch = context.current_epoch();
+    let current_epoch = context.platform.epoch();
 
     if current_epoch.index != 0 {
         // As per spec, the voting for names is only allowed in the first epoch.
@@ -81,17 +81,19 @@ mod test {
     use dpp::block::epoch::Epoch;
     use dpp::block::extended_block_info::ExtendedBlockInfo;
     use dpp::block::extended_block_info::v0::ExtendedBlockInfoV0;
+    use dpp::consensus::state::data_trigger::DataTriggerError;
+    use dpp::data_contract::base::DataContractBaseMethodsV0;
     use dpp::document::{DocumentV0Getters, DocumentV0Setters};
     use dpp::platform_value::platform_value;
     use dpp::state_transition::documents_batch_transition::document_create_transition::DocumentCreateTransition;
     use dpp::state_transition::documents_batch_transition::document_transition::action_type::DocumentTransitionActionType;
     use dpp::tests::fixtures::{get_document_transitions_fixture, get_dpns_data_contract_fixture, get_dpns_parent_document_fixture, get_dpns_preorder_document_fixture, ParentDocumentOptions};
-    use dpp::version::TryIntoPlatformVersioned;
+    use dpp::version::{DefaultForPlatformVersion, TryIntoPlatformVersioned};
     use drive::state_transition_action::document::documents_batch::document_transition::document_create_transition_action::DocumentCreateTransitionAction;
-    use crate::error::execution::ExecutionError;
     use crate::execution::types::state_transition_execution_context::StateTransitionExecutionContext;
     use crate::execution::validation::state_transition::documents_batch::data_triggers::DataTriggerExecutionContext;
     use crate::execution::validation::state_transition::documents_batch::data_triggers::triggers::dpns::v0::voting_trigger::run_name_register_trigger;
+    use crate::platform_types::platform_state::v0::PlatformStateV0Methods;
 
     #[test]
     fn should_return_error_if_can_not_get_epoch_info() {
@@ -124,17 +126,24 @@ mod test {
 
         let mut domain_document =
             get_dpns_parent_document_fixture(ParentDocumentOptions::default(), 0);
-        domain_document
-            .set(
-                super::property_names::CORE_HEIGHT_CREATED_AT,
-                platform_value!(10u32),
-            )
-            .expect("expected to set core height created at");
-        let owner_id = &domain_document.owner_id();
+        domain_document.set(
+            super::property_names::CORE_HEIGHT_CREATED_AT,
+            platform_value!(10u32),
+        );
+        let owner_id = domain_document.owner_id();
+
+        let data_contract = get_dpns_data_contract_fixture(
+            Some(owner_id),
+            state_read_guard.current_protocol_version_in_consensus(),
+        )
+        .data_contract_owned();
+        let document_type = data_contract
+            .document_type_for_name("domain")
+            .expect("expected to get domain document type");
 
         let document_transitions = get_document_transitions_fixture([(
             DocumentTransitionActionType::Create,
-            vec![domain_document],
+            vec![(domain_document, document_type)],
         )]);
         let document_transition = document_transitions
             .get(0)
@@ -146,16 +155,18 @@ mod test {
 
         let data_contract = get_dpns_data_contract_fixture(None, 0);
 
-        let transition_execution_context = StateTransitionExecutionContext::default();
+        let transition_execution_context =
+            StateTransitionExecutionContext::default_for_platform_version(platform_version)
+                .unwrap();
 
         let data_trigger_context = DataTriggerExecutionContext {
             platform: &platform_ref,
-            owner_id,
+            owner_id: &owner_id,
             state_transition_execution_context: &transition_execution_context,
             transaction: None,
         };
 
-        transition_execution_context.enable_dry_run();
+        // transition_execution_context.enable_dry_run();
 
         let result = run_name_register_trigger(
             &DocumentCreateTransitionAction::from(
@@ -173,8 +184,9 @@ mod test {
 
         let data_trigger_error = &result.errors[0];
         match data_trigger_error {
-            ExecutionError::DataTriggerExecutionError(message) => {
-                assert_eq!(message, "Vote didn't happen");
+            DataTriggerError::DataTriggerExecutionError(e) => {
+                let message = e.message();
+                assert_eq!(message, "vote bla bla");
             }
             _ => {
                 panic!("Expected DataTriggerExecutionError");
@@ -220,17 +232,24 @@ mod test {
 
         let mut domain_document =
             get_dpns_parent_document_fixture(ParentDocumentOptions::default(), 0);
-        domain_document
-            .set(
-                super::property_names::CORE_HEIGHT_CREATED_AT,
-                platform_value!(10u32),
-            )
-            .expect("expected to set core height created at");
-        let owner_id = &domain_document.owner_id();
+        domain_document.set(
+            super::property_names::CORE_HEIGHT_CREATED_AT,
+            platform_value!(10u32),
+        );
+        let owner_id = domain_document.owner_id();
+
+        let data_contract = get_dpns_data_contract_fixture(
+            Some(owner_id),
+            guard.current_protocol_version_in_consensus(),
+        )
+        .data_contract_owned();
+        let document_type = data_contract
+            .document_type_for_name("domain")
+            .expect("expected to get domain document type");
 
         let document_transitions = get_document_transitions_fixture([(
             DocumentTransitionActionType::Create,
-            vec![domain_document],
+            vec![(domain_document, document_type)],
         )]);
         let document_transition = document_transitions
             .get(0)
@@ -242,16 +261,19 @@ mod test {
 
         let data_contract = get_dpns_data_contract_fixture(None, 0);
 
-        let transition_execution_context = StateTransitionExecutionContext::default();
+        let transition_execution_context =
+            StateTransitionExecutionContext::default_for_platform_version(platform_version)
+                .unwrap();
 
         let data_trigger_context = DataTriggerExecutionContext {
             platform: &platform_ref,
-            owner_id,
+            owner_id: &owner_id,
             state_transition_execution_context: &transition_execution_context,
             transaction: None,
         };
 
-        transition_execution_context.enable_dry_run();
+        // transition_execution_context.enable_dry_run();
+
         let heh = match document_create_transition {
             DocumentCreateTransition::V0(tr) => tr,
             _ => panic!("Expected to be v0"),
@@ -290,17 +312,24 @@ mod test {
 
         let (mut preorder_document, preorder_salt) =
             get_dpns_preorder_document_fixture(ParentDocumentOptions::default(), 0);
-        preorder_document
-            .set(
-                super::property_names::CORE_HEIGHT_CREATED_AT,
-                platform_value!(10u32),
-            )
-            .expect("expected to set core height created at");
-        let owner_id = &preorder_document.owner_id();
+        preorder_document.set(
+            super::property_names::CORE_HEIGHT_CREATED_AT,
+            platform_value!(10u32),
+        );
+        let owner_id = preorder_document.owner_id();
+
+        let data_contract = get_dpns_data_contract_fixture(
+            Some(owner_id),
+            state_read_guard.current_protocol_version_in_consensus(),
+        )
+        .data_contract_owned();
+        let document_type = data_contract
+            .document_type_for_name("preorder")
+            .expect("expected to get domain document type");
 
         let document_transitions = get_document_transitions_fixture([(
             DocumentTransitionActionType::Create,
-            vec![preorder_document],
+            vec![(preorder_document, document_type)],
         )]);
         let document_transition = document_transitions
             .get(0)
@@ -312,16 +341,18 @@ mod test {
 
         let data_contract = get_dpns_data_contract_fixture(None, 0);
 
-        let transition_execution_context = StateTransitionExecutionContext::default();
+        let transition_execution_context =
+            StateTransitionExecutionContext::default_for_platform_version(platform_version)
+                .unwrap();
 
         let data_trigger_context = DataTriggerExecutionContext {
             platform: &platform_ref,
-            owner_id,
+            owner_id: &owner_id,
             state_transition_execution_context: &transition_execution_context,
             transaction: None,
         };
 
-        transition_execution_context.enable_dry_run();
+        // transition_execution_context.enable_dry_run();
 
         let result = run_name_register_trigger(
             &DocumentCreateTransitionAction::from(
