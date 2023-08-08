@@ -1,12 +1,14 @@
+use crate::error::execution::ExecutionError;
 use crate::error::Error;
+use crate::execution::validation::state_transition::documents_batch::data_triggers::{
+    DataTriggerExecutionContext, DataTriggerExecutionResult,
+};
 use crate::platform_types::platform::PlatformStateRef;
+use crate::platform_types::platform_state::v0::PlatformStateV0Methods;
 use dpp::block::epoch::Epoch;
 use dpp::platform_value::btreemap_extensions::BTreeValueMapHelper;
 use dpp::platform_value::Identifier;
 use drive::state_transition_action::document::documents_batch::document_transition::DocumentTransitionAction;
-use crate::error::execution::ExecutionError;
-use crate::execution::validation::state_transition::documents_batch::data_triggers::{DataTriggerExecutionContext, DataTriggerExecutionResult};
-use crate::platform_types::platform_state::v0::PlatformStateV0Methods;
 
 const BLOCKS_SIZE_WINDOW: u32 = 8;
 mod property_names {
@@ -74,6 +76,7 @@ mod test {
     use dpp::state_transition::documents_batch_transition::document_create_transition::DocumentCreateTransition;
     use dpp::state_transition::documents_batch_transition::document_transition::action_type::DocumentTransitionActionType;
     use dpp::tests::fixtures::{get_document_transitions_fixture, get_dpns_data_contract_fixture, get_dpns_parent_document_fixture, get_dpns_preorder_document_fixture, ParentDocumentOptions};
+    use dpp::version::TryIntoPlatformVersioned;
     use drive::state_transition_action::document::documents_batch::document_transition::document_create_transition_action::DocumentCreateTransitionAction;
     use crate::error::execution::ExecutionError;
     use crate::execution::types::state_transition_execution_context::StateTransitionExecutionContext;
@@ -105,6 +108,10 @@ mod test {
             config: &platform.config,
         };
 
+        let platform_version = state_read_guard
+            .current_platform_version()
+            .expect("should return a platform version");
+
         let mut domain_document =
             get_dpns_parent_document_fixture(ParentDocumentOptions::default(), 0);
         domain_document
@@ -115,8 +122,10 @@ mod test {
             .expect("expected to set core height created at");
         let owner_id = &domain_document.owner_id();
 
-        let document_transitions =
-            get_document_transitions_fixture([(DocumentTransitionActionType::Create, vec![domain_document])]);
+        let document_transitions = get_document_transitions_fixture([(
+            DocumentTransitionActionType::Create,
+            vec![domain_document],
+        )]);
         let document_transition = document_transitions
             .get(0)
             .expect("document transition should be present");
@@ -139,11 +148,16 @@ mod test {
         transition_execution_context.enable_dry_run();
 
         let result = run_name_register_trigger(
-            &DocumentCreateTransitionAction::from(document_create_transition).into(),
+            &DocumentCreateTransitionAction::from(
+                document_create_transition
+                    .try_into_platform_versioned(platform_version)
+                    .expect("expected to produce a state transition action"),
+            )
+            .into(),
             &data_trigger_context,
             None,
         )
-            .expect("the execution result should be returned");
+        .expect("the execution result should be returned");
 
         assert!(!result.is_valid());
 
@@ -167,21 +181,26 @@ mod test {
         {
             let mut state_guard = platform.state.write().unwrap().v0_mut().unwrap();
 
-            state_guard.last_committed_block_info = Some(ExtendedBlockInfo::V0(ExtendedBlockInfoV0 {
-                basic_info: BlockInfo {
-                    time_ms: 500000,
-                    height: 100,
-                    core_height: 42,
-                    epoch: Epoch::new(1).expect("expected to create epoch"),
-                },
-                app_hash: platform.drive.grove.root_hash(None).unwrap().unwrap(),
-                quorum_hash: [0u8; 32],
-                signature: [0u8; 96],
-                round: 0,
-            }));
+            state_guard.last_committed_block_info =
+                Some(ExtendedBlockInfo::V0(ExtendedBlockInfoV0 {
+                    basic_info: BlockInfo {
+                        time_ms: 500000,
+                        height: 100,
+                        core_height: 42,
+                        epoch: Epoch::new(1).expect("expected to create epoch"),
+                    },
+                    app_hash: platform.drive.grove.root_hash(None).unwrap().unwrap(),
+                    quorum_hash: [0u8; 32],
+                    signature: [0u8; 96],
+                    round: 0,
+                }));
         }
 
         let guard = platform.state.read().unwrap();
+
+        let platform_version = guard
+            .current_platform_version()
+            .expect("should return a platform version");
 
         let platform_ref = PlatformStateRef {
             drive: &platform.drive,
@@ -199,8 +218,10 @@ mod test {
             .expect("expected to set core height created at");
         let owner_id = &domain_document.owner_id();
 
-        let document_transitions =
-            get_document_transitions_fixture([(DocumentTransitionActionType::Create, vec![domain_document])]);
+        let document_transitions = get_document_transitions_fixture([(
+            DocumentTransitionActionType::Create,
+            vec![domain_document],
+        )]);
         let document_transition = document_transitions
             .get(0)
             .expect("document transition should be present");
@@ -222,18 +243,21 @@ mod test {
 
         transition_execution_context.enable_dry_run();
         let heh = match document_create_transition {
-            DocumentCreateTransition::V0(tr) => {
-                tr
-            },
-            _ => panic!("Expected to be v0")
+            DocumentCreateTransition::V0(tr) => tr,
+            _ => panic!("Expected to be v0"),
         };
 
         let result = run_name_register_trigger(
-            &DocumentCreateTransitionAction::from(document_create_transition).into(),
+            &DocumentCreateTransitionAction::from(
+                document_create_transition
+                    .try_into_platform_versioned(platform_version)
+                    .expect("expected to produce a state transition action"),
+            )
+            .into(),
             &data_trigger_context,
             None,
         )
-            .expect("the execution result should be returned");
+        .expect("the execution result should be returned");
 
         assert!(result.is_valid());
     }
@@ -250,6 +274,10 @@ mod test {
             config: &platform.config,
         };
 
+        let platform_version = state_read_guard
+            .current_platform_version()
+            .expect("should return a platform version");
+
         let (mut preorder_document, preorder_salt) =
             get_dpns_preorder_document_fixture(ParentDocumentOptions::default(), 0);
         preorder_document
@@ -260,8 +288,10 @@ mod test {
             .expect("expected to set core height created at");
         let owner_id = &preorder_document.owner_id();
 
-        let document_transitions =
-            get_document_transitions_fixture([(DocumentTransitionActionType::Create, vec![preorder_document])]);
+        let document_transitions = get_document_transitions_fixture([(
+            DocumentTransitionActionType::Create,
+            vec![preorder_document],
+        )]);
         let document_transition = document_transitions
             .get(0)
             .expect("document transition should be present");
@@ -284,11 +314,16 @@ mod test {
         transition_execution_context.enable_dry_run();
 
         let result = run_name_register_trigger(
-            &DocumentCreateTransitionAction::from(document_create_transition).into(),
+            &DocumentCreateTransitionAction::from(
+                document_create_transition
+                    .try_into_platform_versioned(platform_version)
+                    .expect("expected to produce a state transition action"),
+            )
+            .into(),
             &data_trigger_context,
             None,
         )
-            .expect("the execution result should be returned");
+        .expect("the execution result should be returned");
 
         assert!(result.is_valid());
     }
