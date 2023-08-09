@@ -72,6 +72,7 @@ pub struct RandomDocumentTypeParameters {
     pub field_bounds: FieldMinMaxBounds,
     pub keep_history_chance: f64,
     pub documents_mutable_chance: f64,
+    pub votable_chance: f64,
 }
 
 impl RandomDocumentTypeParameters {
@@ -225,6 +226,7 @@ impl DocumentTypeV0 {
 
         let documents_keep_history = rng.gen_bool(parameters.keep_history_chance);
         let documents_mutable = rng.gen_bool(parameters.documents_mutable_chance);
+        let can_be_voted_on = rng.gen_bool(parameters.votable_chance);
 
         let name = format!("doc_type_{}", rng.gen::<u16>());
 
@@ -249,6 +251,7 @@ impl DocumentTypeV0 {
             documents_keep_history,
             documents_mutable,
             data_contract_id,
+            can_be_voted_on
         })
     }
 }
