@@ -421,6 +421,8 @@ mod tests {
 
         println!("{:?}", raw_data_contract);
 
+        assert!(false);
+
         assert_eq!(
             data_contract.data_contract_protocol_version,
             result.data_contract_protocol_version
