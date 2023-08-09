@@ -58,6 +58,7 @@ pub struct DocumentTypeV0 {
     pub documents_mutable: bool,
     #[serde(skip)]
     pub data_contract_id: Identifier,
+    pub can_be_voted_on: bool,
 }
 
 impl DocumentTypeV0 {
@@ -70,6 +71,7 @@ impl DocumentTypeV0 {
         documents_keep_history: bool,
         documents_mutable: bool,
         platform_version: &PlatformVersion,
+        can_be_voted_on: bool,
     ) -> Result<Self, ProtocolError> {
         let index_structure =
             IndexLevel::try_from_indices(indices.as_slice(), name.as_str(), platform_version)?;
@@ -92,6 +94,7 @@ impl DocumentTypeV0 {
             documents_keep_history,
             documents_mutable,
             data_contract_id,
+            can_be_voted_on
         })
     }
 
@@ -226,6 +229,12 @@ impl DocumentTypeV0 {
                 .contract_versions
                 .document_type_versions,
         )?;
+
+        let votable: bool =
+            Value::inner_optional_bool_value(document_type_value_map, property_names::VOTABLE)
+                .map_err(ProtocolError::ValueError)?
+                .unwrap_or(default_mutability);
+
         Ok(DocumentTypeV0 {
             name: String::from(name),
             indices,
@@ -238,6 +247,7 @@ impl DocumentTypeV0 {
             documents_keep_history,
             documents_mutable,
             data_contract_id,
+            can_be_voted_on: votable
         })
     }
 }

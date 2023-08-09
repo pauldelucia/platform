@@ -457,6 +457,10 @@
                   3
                 ],
                 "description": "Public key security level. 0 - Master, 1 - Critical, 2 - High, 3 - Medium. If none specified, High level is used"
+              },
+              "votable": {
+                "type": "boolean",
+                "description": "If true, documents of this type can be voted on by the network"
               }
             }
           },

@@ -38,6 +38,7 @@ pub(self) mod property_names {
     pub const MAX_LENGTH: &str = "maxLength";
     pub const BYTE_ARRAY: &str = "byteArray";
     pub const CONTENT_MEDIA_TYPE: &str = "contentMediaType";
+    pub const VOTABLE: &str = "votable";
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

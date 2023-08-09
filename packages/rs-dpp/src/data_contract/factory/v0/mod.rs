@@ -403,4 +403,34 @@ mod tests {
             result.data_contract().to_object().unwrap()
         );
     }
+
+    #[tokio::test]
+    async fn should_create_votable_types() {
+        let TestData {
+            created_data_contract,
+            raw_data_contract,
+            factory,
+        } = get_test_data();
+
+        let data_contract = created_data_contract.data_contract;
+
+        let result = factory
+            .create_from_object(raw_data_contract.into(), true)
+            .await
+            .expect("Data Contract should be created");
+
+        println!("{:?}", raw_data_contract);
+
+        assert_eq!(
+            data_contract.data_contract_protocol_version,
+            result.data_contract_protocol_version
+        );
+        assert_eq!(data_contract.id, result.id);
+        assert_eq!(data_contract.schema, result.schema);
+        assert_eq!(data_contract.owner_id, result.owner_id);
+        assert_eq!(data_contract.documents, result.documents);
+        assert_eq!(data_contract.metadata, result.metadata);
+        assert_eq!(data_contract.binary_properties, result.binary_properties);
+        assert_eq!(data_contract.defs, result.defs);
+    }
 }
