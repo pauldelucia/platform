@@ -19,6 +19,7 @@ class StopCommand extends ConfigBaseCommand {
     {
       force: isForce,
       verbose: isVerbose,
+      platform: platformOnly,
     },
     stopNodeTask,
     config,
@@ -42,6 +43,7 @@ class StopCommand extends ConfigBaseCommand {
       await tasks.run({
         isForce,
         isVerbose,
+        platformOnly: platformOnly === true,
       });
     } catch (e) {
       throw new MuteOneLineError(e);
@@ -49,18 +51,21 @@ class StopCommand extends ConfigBaseCommand {
   }
 }
 
-StopCommand.description = `Stop node
-
-Stop node
-`;
+StopCommand.description = 'Stop node';
 
 StopCommand.flags = {
   ...ConfigBaseCommand.flags,
   force: Flags.boolean({
     char: 'f',
-    description: 'force stop even if any is running',
+    description: 'force stop even if any service is running',
     default: false,
   }),
+  platform: Flags.boolean({
+    char: 'p',
+    description: 'stop only platform',
+    default: false,
+  }),
+
 };
 
 module.exports = StopCommand;

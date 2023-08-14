@@ -1,10 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-
 const { Listr } = require('listr2');
 const { Observable } = require('rxjs');
 
 const { NETWORK_LOCAL } = require('../../constants');
+const isServiceBuildRequired = require('../../util/isServiceBuildRequired');
 
 /**
  *
@@ -13,6 +11,8 @@ const { NETWORK_LOCAL } = require('../../constants');
  * @param {waitForMasternodesSync} waitForMasternodesSync
  * @param {createRpcClient} createRpcClient
  * @param {buildServicesTask} buildServicesTask
+ * @param {getConnectionHost} getConnectionHost
+ * @param {ensureFileMountExists} ensureFileMountExists
  * @return {startNodeTask}
  */
 function startNodeTaskFactory(
@@ -21,6 +21,8 @@ function startNodeTaskFactory(
   waitForMasternodesSync,
   createRpcClient,
   buildServicesTask,
+  getConnectionHost,
+  ensureFileMountExists,
 ) {
   /**
    * @typedef {startNodeTask}
@@ -28,74 +30,73 @@ function startNodeTaskFactory(
    * @return {Object}
    */
   function startNodeTask(config) {
-    // check core is not reindexing
-    if (config.get('core.reindex.enable', true)) {
-      throw new Error(`Your dashcore node in config [${config.name}] is reindexing, please allow the process to complete first`);
-    }
-
     // Check external IP is set
-    config.get('externalIp', true);
+    if (config.get('core.masternode.enable')) {
+      config.get('externalIp', true);
+    }
 
     const isMinerEnabled = config.get('core.miner.enable');
 
     if (isMinerEnabled === true && config.get('network') !== NETWORK_LOCAL) {
-      throw new Error(`'core.miner.enabled' option only works with local network. Your network is ${config.get('network')}.`);
+      throw new Error(`'core.miner.enable' option only works with local network. Your network is ${config.get('network')}.`);
     }
 
+    const coreLogFilePath = config.get('core.log.file.path');
+    ensureFileMountExists(coreLogFilePath, 0o666);
+
     // Check Drive log files are created
-    if (config.has('platform')) {
+    if (config.get('platform.enable')) {
       const prettyFilePath = config.get('platform.drive.abci.log.prettyFile.path');
-
-      // Remove directory that could potentially be created by Docker mount
-      if (fs.existsSync(prettyFilePath) && fs.lstatSync(prettyFilePath).isDirectory()) {
-        fs.rmSync(prettyFilePath, { recursive: true });
-      }
-
-      if (!fs.existsSync(prettyFilePath)) {
-        fs.mkdirSync(path.dirname(prettyFilePath), { recursive: true });
-        fs.writeFileSync(prettyFilePath, '');
-      }
+      ensureFileMountExists(prettyFilePath);
 
       const jsonFilePath = config.get('platform.drive.abci.log.jsonFile.path');
-
-      // Remove directory that could potentially be created by Docker mount
-      if (fs.existsSync(jsonFilePath) && fs.lstatSync(jsonFilePath).isDirectory()) {
-        fs.rmSync(jsonFilePath, { recursive: true });
-      }
-
-      if (!fs.existsSync(jsonFilePath)) {
-        fs.mkdirSync(path.dirname(jsonFilePath), { recursive: true });
-        fs.writeFileSync(jsonFilePath, '');
-      }
+      ensureFileMountExists(jsonFilePath);
     }
 
     return new Listr([
       {
         title: 'Check node is not started',
-        task: async () => {
-          if (await dockerCompose.isServiceRunning(config.toEnvs())) {
+        enabled: (ctx) => !ctx.isForce,
+        task: async (ctx) => {
+          const profiles = [];
+          if (ctx.platformOnly) {
+            profiles.push('platform');
+          }
+
+          if (await dockerCompose.isNodeRunning(config, { profiles })) {
             throw new Error('Running services detected. Please ensure all services are stopped for this config before starting');
           }
         },
       },
       {
+        title: 'Check core is started',
+        enabled: (ctx) => ctx.platformOnly === true,
+        task: async () => {
+          if (!await dockerCompose.isServiceRunning(config, 'core')) {
+            throw new Error('Platform services depend on Core and can\'t be started without it. Please run "dashmate start" without "--platform" flag');
+          }
+        },
+      },
+      {
         enabled: (ctx) => !ctx.skipBuildServices
-          && config.has('platform.sourcePath')
-          && config.get('platform.sourcePath') !== null,
+          && isServiceBuildRequired(config),
         task: () => buildServicesTask(config),
       },
       {
         title: 'Start services',
-        task: async () => {
+        task: async (ctx) => {
           const isMasternode = config.get('core.masternode.enable');
           if (isMasternode) {
             // Check operatorPrivateKey is set
             config.get('core.masternode.operator.privateKey', true);
           }
 
-          const envs = config.toEnvs();
+          const profiles = [];
+          if (ctx.platformOnly) {
+            profiles.push('platform');
+          }
 
-          await dockerCompose.up(envs);
+          await dockerCompose.up(config, { profiles });
         },
       },
       {
@@ -106,6 +107,7 @@ function startNodeTaskFactory(
             port: config.get('core.rpc.port'),
             user: config.get('core.rpc.user'),
             pass: config.get('core.rpc.password'),
+            host: await getConnectionHost(config, 'core'),
           });
 
           return new Observable(async (observer) => {

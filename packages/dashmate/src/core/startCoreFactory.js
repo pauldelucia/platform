@@ -5,6 +5,8 @@ const CoreService = require('./CoreService');
  * @param {waitForCoreStart} waitForCoreStart
  * @param {waitForCoreSync} waitForCoreSync
  * @param {DockerCompose} dockerCompose
+ * @param {getConnectionHost} getConnectionHost
+ * @param {ensureFileMountExists} ensureFileMountExists
  * @return {startCore}
  */
 function startCoreFactory(
@@ -12,6 +14,8 @@ function startCoreFactory(
   waitForCoreStart,
   waitForCoreSync,
   dockerCompose,
+  getConnectionHost,
+  ensureFileMountExists,
 ) {
   /**
    * @typedef startCore
@@ -55,8 +59,11 @@ function startCoreFactory(
       coreCommand.push('--disablewallet=1');
     }
 
+    const logFilePath = config.get('core.log.file.path');
+    ensureFileMountExists(logFilePath, 0o666);
+
     const coreContainer = await dockerCompose.runService(
-      config.toEnvs(),
+      config,
       'core',
       coreCommand,
       [
@@ -70,6 +77,7 @@ function startCoreFactory(
         port: config.get('core.rpc.port'),
         user: config.get('core.rpc.user'),
         pass: config.get('core.rpc.password'),
+        host: await getConnectionHost(config, 'core'),
       },
     );
 

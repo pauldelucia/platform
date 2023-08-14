@@ -10,7 +10,6 @@ class ResetCommand extends ConfigBaseCommand {
   /**
    * @param {Object} args
    * @param {Object} flags
-   * @param {isSystemConfig} isSystemConfig
    * @param {Config} config
    * @param {resetNodeTask} resetNodeTask
    *
@@ -22,20 +21,11 @@ class ResetCommand extends ConfigBaseCommand {
       verbose: isVerbose,
       hard: isHardReset,
       force: isForce,
-      'platform-only': isPlatformOnlyReset,
+      platform: isPlatformOnlyReset,
     },
-    isSystemConfig,
     config,
     resetNodeTask,
   ) {
-    if (isHardReset && !isSystemConfig(config.getName())) {
-      throw new Error(`Cannot hard reset non-system config "${config.getName()}"`);
-    }
-
-    if (!config.has('platform') && isPlatformOnlyReset) {
-      throw new Error('Cannot reset platform only if platform services are not enabled in config');
-    }
-
     const tasks = new Listr([
       {
         title: `Reset ${config.getName()} node`,
@@ -65,16 +55,13 @@ class ResetCommand extends ConfigBaseCommand {
   }
 }
 
-ResetCommand.description = `Reset node data
-
-Reset node data
-`;
+ResetCommand.description = 'Reset node data';
 
 ResetCommand.flags = {
   ...ConfigBaseCommand.flags,
   hard: Flags.boolean({ char: 'h', description: 'reset config as well as data', default: false }),
   force: Flags.boolean({ char: 'f', description: 'skip running services check', default: false }),
-  'platform-only': Flags.boolean({ char: 'p', description: 'reset platform data only', default: false }),
+  platform: Flags.boolean({ char: 'p', description: 'reset platform services and data only', default: false }),
   verbose: Flags.boolean({ char: 'v', description: 'use verbose mode for output', default: false }),
 };
 

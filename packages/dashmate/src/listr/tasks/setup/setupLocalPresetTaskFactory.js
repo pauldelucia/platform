@@ -1,27 +1,33 @@
 const { Listr } = require('listr2');
 
-const path = require('path');
-
 const {
   PRESET_LOCAL,
-  HOME_DIR_PATH,
+  SSL_PROVIDERS,
 } = require('../../../constants');
+
+const generateTenderdashNodeKey = require('../../../tenderdash/generateTenderdashNodeKey');
+const deriveTenderdashNodeId = require('../../../tenderdash/deriveTenderdashNodeId');
+const generateRandomString = require('../../../util/generateRandomString');
 
 /**
  * @param {ConfigFile} configFile
  * @param {configureCoreTask} configureCoreTask
  * @param {configureTenderdashTask} configureTenderdashTask
+ * @param {obtainSelfSignedCertificateTask} obtainSelfSignedCertificateTask
  * @param {resolveDockerHostIp} resolveDockerHostIp
  * @param {configFileRepository} configFileRepository
  * @param {generateHDPrivateKeys} generateHDPrivateKeys
+ * @param {HomeDir} homeDir
  */
 function setupLocalPresetTaskFactory(
   configFile,
   configureCoreTask,
+  obtainSelfSignedCertificateTask,
   configureTenderdashTask,
   resolveDockerHostIp,
   configFileRepository,
   generateHDPrivateKeys,
+  homeDir,
 ) {
   /**
    * @typedef {setupLocalPresetTask}
@@ -34,18 +40,25 @@ function setupLocalPresetTaskFactory(
         enabled: (ctx) => ctx.nodeCount === undefined,
         task: async (ctx, task) => {
           ctx.nodeCount = await task.prompt({
-            type: 'Numeral',
+            type: 'input',
             message: 'Enter the number of masternodes',
             initial: 3,
-            float: false,
-            min: 3,
             validate: (state) => {
+              if (Number.isNaN(+state)) {
+                return 'You must set a number of masternodes';
+              }
+
+              if (!Number.isInteger(+state)) {
+                return 'Must be an integer';
+              }
+
               if (+state < 3) {
                 return 'You must set not less than 3';
               }
 
               return true;
             },
+            result: (value) => Number(value),
           });
         },
       },
@@ -123,6 +136,14 @@ function setupLocalPresetTaskFactory(
           } = await generateHDPrivateKeys(network, [0, 1]);
 
           const {
+            hdPrivateKey: withdrawalsPrivateKey,
+            derivedPrivateKeys: [
+              withdrawalsDerivedMasterPrivateKey,
+              withdrawalsDerivedSecondPrivateKey,
+            ],
+          } = await generateHDPrivateKeys(network, [0, 1]);
+
+          const {
             hdPrivateKey: masternodeRewardSharesPrivateKey,
             derivedPrivateKeys: [
               masternodeRewardSharesDerivedMasterPrivateKey,
@@ -142,6 +163,9 @@ function setupLocalPresetTaskFactory(
           // eslint-disable-next-line no-param-reassign
           task.output = `Masternode Reward Shares Private Key: ${masternodeRewardSharesPrivateKey.toString()}`;
 
+          // eslint-disable-next-line no-param-reassign
+          task.output = `Withdrawals Private Key: ${withdrawalsPrivateKey.toString()}`;
+
           const subTasks = ctx.configGroup.map((config, i) => (
             {
               title: `Create ${config.getName()} config`,
@@ -149,20 +173,30 @@ function setupLocalPresetTaskFactory(
                 const nodeIndex = i + 1;
 
                 config.set('group', 'local');
-                config.set('core.p2p.port', 20001 + (i * 100));
-                config.set('core.rpc.port', 20002 + (i * 100));
+                config.set('core.p2p.port', config.get('core.p2p.port') + (i * 100));
+                config.set('core.rpc.port', config.get('core.rpc.port') + (i * 100));
+                config.set('core.rpc.user', generateRandomString(8));
+                config.set('core.rpc.password', generateRandomString(12));
                 config.set('externalIp', hostDockerInternalIp);
 
-                config.set('docker.network.subnet', `172.24.${nodeIndex}.0/24`);
+                const subnet = config.get('docker.network.subnet').split('.');
+                subnet[2] = nodeIndex;
+
+                config.set('docker.network.subnet', subnet.join('.'));
 
                 // Setup Core debug logs
+                const coreLogFilePath = homeDir.joinPath('logs', config.getName(), 'core.log');
+                config.set('core.log.file.path', coreLogFilePath);
+
                 if (ctx.debugLogs) {
-                  config.set('core.debug', 1);
+                  config.set('core.log.file.categories', ['all']);
                 }
 
                 // Although not all nodes are miners, all nodes should be aware of
                 // the miner interval to be able to sync mocked time
                 config.set('core.miner.interval', ctx.minerInterval);
+
+                config.set('dashmate.helper.api.port', config.get('dashmate.helper.api.port') + (i * 100));
 
                 if (config.getName() === 'local_seed') {
                   config.set('description', 'seed node for local network');
@@ -174,32 +208,37 @@ function setupLocalPresetTaskFactory(
                   config.set('core.miner.enable', true);
 
                   // Disable platform for the seed node
-                  config.set('platform', undefined);
+                  config.set('platform.enable', false);
                 } else {
                   config.set('description', `local node #${nodeIndex}`);
 
-                  config.set('platform.dapi.envoy.http.port', 3000 + (i * 100));
-                  config.set('platform.dapi.envoy.grpc.port', 3010 + (i * 100));
-                  config.set('platform.drive.tenderdash.p2p.port', 26656 + (i * 100));
-                  config.set('platform.drive.tenderdash.rpc.port', 26657 + (i * 100));
+                  const key = generateTenderdashNodeKey();
+                  const id = deriveTenderdashNodeId(key);
+
+                  config.set('platform.drive.tenderdash.node.id', id);
+                  config.set('platform.drive.tenderdash.node.key', key);
+
+                  config.set('platform.dapi.envoy.http.port', config.get('platform.dapi.envoy.http.port') + (i * 100));
+                  config.set('platform.drive.tenderdash.p2p.port', config.get('platform.drive.tenderdash.p2p.port') + (i * 100));
+                  config.set('platform.drive.tenderdash.rpc.port', config.get('platform.drive.tenderdash.rpc.port') + (i * 100));
+                  config.set('platform.drive.tenderdash.pprof.port', config.get('platform.drive.tenderdash.pprof.port') + (i * 100));
+                  config.set('platform.drive.tenderdash.moniker', config.name);
 
                   // Setup logs
                   if (ctx.debugLogs) {
                     config.set('platform.drive.abci.log.stdout.level', 'trace');
                     config.set('platform.drive.abci.log.prettyFile.level', 'trace');
 
-                    config.set('platform.drive.tenderdash.log.level', {
-                      '*': 'debug',
-                    });
+                    config.set('platform.drive.tenderdash.log.level', 'debug');
                   }
 
                   if (!config.get('platform.drive.abci.log.prettyFile.path')) {
-                    const drivePrettyLogFile = path.join(HOME_DIR_PATH, 'logs', config.getName(), 'drive_pretty.log');
+                    const drivePrettyLogFile = homeDir.joinPath('logs', config.getName(), 'drive_pretty.log');
                     config.set('platform.drive.abci.log.prettyFile.path', drivePrettyLogFile);
                   }
 
                   if (!config.get('platform.drive.abci.log.jsonFile.path')) {
-                    const driveJsonLogFile = path.join(HOME_DIR_PATH, 'logs', config.getName(), 'drive_json.log');
+                    const driveJsonLogFile = homeDir.joinPath('logs', config.getName(), 'drive_json.log');
                     config.set('platform.drive.abci.log.jsonFile.path', driveJsonLogFile);
                   }
 
@@ -211,6 +250,9 @@ function setupLocalPresetTaskFactory(
 
                   config.set('platform.dashpay.masterPublicKey', dashpayDerivedMasterPrivateKey.privateKey.toPublicKey().toString());
                   config.set('platform.dashpay.secondPublicKey', dashpayDerivedSecondPrivateKey.privateKey.toPublicKey().toString());
+
+                  config.set('platform.withdrawals.masterPublicKey', withdrawalsDerivedMasterPrivateKey.privateKey.toPublicKey().toString());
+                  config.set('platform.withdrawals.secondPublicKey', withdrawalsDerivedSecondPrivateKey.privateKey.toPublicKey().toString());
 
                   config.set(
                     'platform.masternodeRewardShares.masterPublicKey',
@@ -252,6 +294,23 @@ function setupLocalPresetTaskFactory(
       {
         title: 'Configure Tenderdash nodes',
         task: (ctx) => configureTenderdashTask(ctx.configGroup),
+      },
+      {
+        title: 'Configure SSL certificates',
+        task: (ctx) => {
+          const platformConfigs = ctx.configGroup.filter((config) => config.get('platform.enable'));
+
+          const subTasks = platformConfigs.map((config) => {
+            config.set('platform.dapi.envoy.ssl.provider', SSL_PROVIDERS.SELF_SIGNED);
+
+            return {
+              title: `Generate certificate for ${config.getName()}`,
+              task: async () => obtainSelfSignedCertificateTask(config),
+            };
+          });
+
+          return new Listr(subTasks);
+        },
       },
     ]);
   }

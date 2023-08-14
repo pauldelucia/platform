@@ -4,12 +4,10 @@ const { Flags } = require('@oclif/core');
 const { OUTPUT_FORMATS } = require('../../constants');
 
 const ConfigBaseCommand = require('../../oclif/command/ConfigBaseCommand');
-const CoreService = require('../../core/CoreService');
-const blocksToTime = require('../../util/blocksToTime');
-const getPaymentQueuePosition = require('../../util/getPaymentQueuePosition');
 const printObject = require('../../printers/printObject');
-
-const ContainerIsNotPresentError = require('../../docker/errors/ContainerIsNotPresentError');
+const colors = require('../../status/colors');
+const MasternodeStateEnum = require('../../status/enums/masternodeState');
+const MasternodeSyncAssetEnum = require('../../status/enums/masternodeSyncAsset');
 
 class MasternodeStatusCommand extends ConfigBaseCommand {
   /**
@@ -18,6 +16,7 @@ class MasternodeStatusCommand extends ConfigBaseCommand {
    * @param {DockerCompose} dockerCompose
    * @param {createRpcClient} createRpcClient
    * @param {Config} config
+   * @param getMasternodeScope getMasternodeScope
    * @return {Promise<void>}
    */
   async runWithDependencies(
@@ -26,129 +25,64 @@ class MasternodeStatusCommand extends ConfigBaseCommand {
     dockerCompose,
     createRpcClient,
     config,
+    getMasternodeScope,
   ) {
-    const coreService = new CoreService(
-      config,
-      createRpcClient(
-        {
-          port: config.get('core.rpc.port'),
-          user: config.get('core.rpc.user'),
-          pass: config.get('core.rpc.password'),
-        },
-      ),
-      dockerCompose.docker.getContainer('core'),
-    );
-
-    if (config.get('core.masternode.enable') === false) {
-      // eslint-disable-next-line no-console
-      console.log('This is not a masternode!');
-      this.exit();
-    }
-
-    // Collect data
-    const { result: mnsyncStatus } = await coreService.getRpcClient().mnsync('status');
-    const {
-      result: {
-        blocks: coreBlocks,
-        verificationprogress: coreVerificationProgress,
-      },
-    } = await coreService.getRpcClient().getBlockchainInfo();
-
-    const {
-      result: {
-        enabled: masternodeEnabledCount,
-      },
-    } = await coreService.getRpcClient().masternode('count');
-
-    const {
-      result: {
-        dmnState: masternodeDmnState,
-        state: masternodeState,
-        status: masternodeStatus,
-        proTxHash: masternodeProTxHash,
-      },
-    } = await coreService.getRpcClient().masternode('status');
-
-    let sentinelState = (await dockerCompose.execCommand(
-      config.toEnvs(),
-      'sentinel',
-      'python bin/sentinel.py',
-    )).out.split(/\r?\n/)[0];
-
-    // Determine status
-    let status;
-    try {
-      ({
-        State: {
-          Status: status,
-        },
-      } = await dockerCompose.inspectService(config.toEnvs(), 'core'));
-    } catch (e) {
-      if (e instanceof ContainerIsNotPresentError) {
-        status = 'not started';
-      }
-    }
-    if (status === 'running' && mnsyncStatus.AssetName !== 'MASTERNODE_SYNC_FINISHED') {
-      status = `syncing ${(coreVerificationProgress * 100).toFixed(2)}%`;
-    }
-
-    // Determine payment queue position
-    let paymentQueuePosition;
-    let lastPaidTime;
-    if (masternodeState === 'READY') {
-      paymentQueuePosition = getPaymentQueuePosition(
-        masternodeDmnState, masternodeEnabledCount, coreBlocks,
-      );
-
-      // Determine last paid time
-      if (masternodeDmnState.lastPaidHeight === 0) {
-        lastPaidTime = 'Never';
-      } else {
-        lastPaidTime = `${blocksToTime(coreBlocks - masternodeDmnState.lastPaidHeight)} ago`;
-      }
-    }
-
-    // Apply colors
-    if (status === 'running') {
-      status = chalk.green(status);
-    } else if (status.startsWith('syncing')) {
-      status = chalk.yellow(status);
-    } else {
-      status = chalk.red(status);
-    }
-
-    if (sentinelState === '') {
-      sentinelState = chalk.green('No errors');
-    } else {
-      sentinelState = chalk.red(sentinelState);
-    }
-
-    let masternodePoSePenalty;
-    if (masternodeStatus === 'Ready') {
-      if (masternodeDmnState.PoSePenalty === 0) {
-        masternodePoSePenalty = chalk.green(masternodeDmnState.PoSePenalty);
-      } else if (masternodeDmnState.PoSePenalty < masternodeEnabledCount) {
-        masternodePoSePenalty = chalk.yellow(masternodeDmnState.PoSePenalty);
-      } else {
-        masternodePoSePenalty = chalk.red(masternodeDmnState.PoSePenalty);
-      }
-    }
-
-    const outputRows = {
-      'Masternode status': (masternodeState === 'READY' ? chalk.green : chalk.red)(masternodeStatus),
-      'Sentinel status': (sentinelState !== '' ? sentinelState : 'No errors'),
+    const plain = {
+      'Sentinel Version': 'n/a',
+      'Sentinel Status': 'n/a',
+      'Masternode State': 'n/a',
+      'Masternode Sync Status': 'n/a',
+      'ProTx Hash': 'n/a',
+      'PoSe Penalty': 'n/a',
+      'Last paid block': 'n/a',
+      'Last paid time': 'n/a',
+      'Enabled count': 'n/a',
+      'Payment queue position': 'n/a',
+      'Next payment time': 'n/a',
     };
 
-    if (masternodeState === 'READY') {
-      outputRows['ProTx Hash'] = masternodeProTxHash;
-      outputRows['PoSe Penalty'] = masternodePoSePenalty;
-      outputRows['Last paid block'] = masternodeDmnState.lastPaidHeight;
-      outputRows['Last paid time'] = lastPaidTime;
-      outputRows['Payment queue position'] = `${paymentQueuePosition}/${masternodeEnabledCount}`;
-      outputRows['Next payment time'] = `in ${blocksToTime(paymentQueuePosition)}`;
+    if (config.get('core.masternode.enable') === false) {
+      if (process.env.DEBUG) {
+        // eslint-disable-next-line no-console
+        console.error('This is not a masternode!');
+      }
     }
 
-    printObject(outputRows, flags.format);
+    const scope = await getMasternodeScope(config);
+
+    if (flags.format === OUTPUT_FORMATS.PLAIN) {
+      if (scope.sentinel.version) {
+        plain['Sentinel Version'] = scope.sentinel.version || 'n/a';
+        plain['Sentinel Status'] = colors.sentinel(scope.sentinel.state)(scope.sentinel.state) || 'n/a';
+      }
+
+      if (scope.syncAsset === MasternodeSyncAssetEnum.MASTERNODE_SYNC_FINISHED) {
+        plain['Masternode State'] = (scope.state === MasternodeStateEnum.READY
+          ? chalk.green : chalk.red)(scope.state) || 'n/a';
+      } else {
+        plain['Masternode Sync Status'] = scope.syncAsset ? chalk.yellow(scope.syncAsset) : 'n/a';
+      }
+
+      if (scope.state === MasternodeStateEnum.READY) {
+        const {
+          lastPaidHeight, lastPaidTime,
+          paymentQueuePosition, nextPaymentTime,
+          poSePenalty, enabledCount,
+        } = scope.nodeState;
+
+        plain['ProTx Hash'] = scope.proTxHash || 'n/a';
+        plain['PoSe Penalty'] = colors.poSePenalty(poSePenalty, enabledCount)(`${poSePenalty}`) || 'n/a';
+        plain['Last paid block'] = lastPaidHeight || 'n/a';
+        plain['Last paid time'] = lastPaidHeight === 0 ? 'Never' : (lastPaidTime || 'n/a');
+        plain['Payment queue position'] = paymentQueuePosition || 'n/a';
+        plain['Next payment time'] = `in ${nextPaymentTime}` || 'n/a';
+        plain['Enabled count'] = enabledCount || 'n/a';
+      }
+
+      return printObject(plain, flags.format);
+    }
+
+    return printObject(scope, flags.format);
   }
 }
 

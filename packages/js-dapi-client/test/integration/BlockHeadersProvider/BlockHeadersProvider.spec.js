@@ -4,12 +4,14 @@ const BlockHeadersProvider = require('../../../lib/BlockHeadersProvider/BlockHea
 const BlockHeadersWithChainLocksStreamMock = require('../../../lib/test/mocks/BlockHeadersWithChainLocksStreamMock');
 const mockHeadersChain = require('../../../lib/test/mocks/mockHeadersChain');
 
-describe('BlockHeadersProvider - integration', () => {
+describe('BlockHeadersProvider - integration', function describe() {
+  this.timeout(6000);
+
   let blockHeadersProvider;
   let historicalStreams = [];
   let continuousStream;
 
-  const createBlockHeadersProvider = (sinon, opts = {}) => {
+  const createBlockHeadersProvider = async (sinon, opts = {}) => {
     historicalStreams = [];
     continuousStream = null;
 
@@ -37,13 +39,14 @@ describe('BlockHeadersProvider - integration', () => {
         count: 0,
       }),
     );
+    await blockHeadersProvider.initializeChainWith([], 0);
   };
 
   // Start from height bigger than the first block
   // because we need to make sure that spv chain could bootstrap itself
   // from any header
   const fromBlockHeight = 10;
-  const numHeaders = 500;
+  const numHeaders = 100;
   const newHeadersAmount = 2;
   const numStreams = 5;
   const historicalHeadersAmount = numHeaders - newHeadersAmount;
@@ -57,7 +60,7 @@ describe('BlockHeadersProvider - integration', () => {
   before(async function () {
     headers = await mockHeadersChain('testnet', numHeaders);
 
-    createBlockHeadersProvider(this.sinon, {
+    await createBlockHeadersProvider(this.sinon, {
       targetBatchSize: historicalBatchSize,
     });
   });

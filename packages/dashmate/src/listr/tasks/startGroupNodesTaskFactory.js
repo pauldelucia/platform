@@ -2,6 +2,7 @@ const { Listr } = require('listr2');
 
 const { PrivateKey } = require('@dashevo/dashcore-lib');
 const { NETWORK_LOCAL } = require('../../constants');
+const isServiceBuildRequired = require('../../util/isServiceBuildRequired');
 
 /**
  *
@@ -13,6 +14,7 @@ const { NETWORK_LOCAL } = require('../../constants');
  * @param {startNodeTask} startNodeTask
  * @param {waitForNodeToBeReadyTask} waitForNodeToBeReadyTask
  * @param {buildServicesTask} buildServicesTask
+ * @param {getConnectionHost} getConnectionHost
  * @return {startGroupNodesTask}
  */
 function startGroupNodesTaskFactory(
@@ -24,6 +26,7 @@ function startGroupNodesTaskFactory(
   startNodeTask,
   waitForNodeToBeReadyTask,
   buildServicesTask,
+  getConnectionHost,
 ) {
   /**
    * @typedef {startGroupNodesTask}
@@ -36,7 +39,7 @@ function startGroupNodesTaskFactory(
     ));
 
     const platformBuildConfig = configGroup.find((config) => (
-      config.has('platform.sourcePath') && config.get('platform.sourcePath') !== null
+      isServiceBuildRequired(config)
     ));
 
     return new Listr([
@@ -68,6 +71,7 @@ function startGroupNodesTaskFactory(
                 port: config.get('core.rpc.port'),
                 user: config.get('core.rpc.user'),
                 pass: config.get('core.rpc.password'),
+                host: await getConnectionHost(config, 'core'),
               });
 
               await waitForCorePeersConnected(rpcClient);
@@ -93,7 +97,7 @@ function startGroupNodesTaskFactory(
             task: async () => {
               /* eslint-disable no-useless-escape */
               await dockerCompose.execCommand(
-                config.toEnvs(),
+                config,
                 'core',
                 [
                   'bash',
@@ -133,7 +137,7 @@ function startGroupNodesTaskFactory(
           const minerInterval = minerConfig.get('core.miner.interval');
 
           await dockerCompose.execCommand(
-            minerConfig.toEnvs(),
+            minerConfig,
             'core',
             [
               'bash',
@@ -152,7 +156,7 @@ function startGroupNodesTaskFactory(
         enabled: (ctx) => Boolean(ctx.waitForReadiness),
         task: () => {
           const tasks = configGroup
-            .filter((config) => config.has('platform'))
+            .filter((config) => config.get('platform.enable'))
             .map((config) => ({
               title: `Wait for ${config.getName()} node`,
               task: () => waitForNodeToBeReadyTask(config),

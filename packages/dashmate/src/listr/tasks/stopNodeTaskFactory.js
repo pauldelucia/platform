@@ -3,11 +3,13 @@ const { Listr } = require('listr2');
 /**
  * @param {DockerCompose} dockerCompose
  * @param {createRpcClient} createRpcClient
+ * @param {getConnectionHost} getConnectionHost
  * @return {stopNodeTask}
  */
 function stopNodeTaskFactory(
   dockerCompose,
   createRpcClient,
+  getConnectionHost,
 ) {
   /**
    * Stop node
@@ -21,8 +23,13 @@ function stopNodeTaskFactory(
       {
         title: 'Check node is running',
         skip: (ctx) => ctx.isForce,
-        task: async () => {
-          if (!await dockerCompose.isServiceRunning(config.toEnvs())) {
+        task: async (ctx) => {
+          const profiles = [];
+          if (ctx.platformOnly) {
+            profiles.push('platform');
+          }
+
+          if (!await dockerCompose.isNodeRunning(config, { profiles })) {
             throw new Error('Node is not running');
           }
         },
@@ -36,6 +43,7 @@ function stopNodeTaskFactory(
             port: config.get('core.rpc.port'),
             user: config.get('core.rpc.user'),
             pass: config.get('core.rpc.password'),
+            host: await getConnectionHost(config, 'core'),
           });
 
           const { result: { mediantime } } = await rpcClient.getBlockchainInfo();
@@ -45,7 +53,14 @@ function stopNodeTaskFactory(
       },
       {
         title: `Stopping ${config.getName()} node`,
-        task: async () => dockerCompose.stop(config.toEnvs()),
+        task: async (ctx) => {
+          const profiles = [];
+          if (ctx.platformOnly) {
+            profiles.push('platform');
+          }
+
+          await dockerCompose.stop(config, { profiles });
+        },
       },
     ]);
   }

@@ -8,7 +8,7 @@ const {
 const waitForNodesToHaveTheSameSporks = require('../../../../core/waitForNodesToHaveTheSameSporks');
 const waitForNodesToHaveTheSameHeight = require('../../../../core/waitForNodesToHaveTheSameHeight');
 
-const { NETWORK_LOCAL, MASTERNODE_DASH_AMOUNT } = require('../../../../constants');
+const { NETWORK_LOCAL, HPMN_COLLATERAL_AMOUNT } = require('../../../../constants');
 
 /**
  * @param {renderServiceTemplates} renderServiceTemplates
@@ -89,13 +89,16 @@ function configureCoreTaskFactory(
               task: async () => {
                 const config = configGroup.find((c) => c.getName() === 'local_seed');
 
-                ctx.coreService = await startCore(config, { wallet: true, addressIndex: true });
+                ctx.coreService = await startCore(
+                  config,
+                  { wallet: true, addressIndex: true },
+                );
               },
             },
             {
               title: 'Activating DIP3',
               task: () => new Observable(async (observer) => {
-                const dip3ActivationHeight = 500;
+                const dip3ActivationHeight = 1000;
                 const blocksToGenerateInOneStep = 10;
 
                 let blocksGenerated = 0;
@@ -148,7 +151,7 @@ function configureCoreTaskFactory(
             {
               title: 'Generating funds to use as a collateral for masternodes',
               task: () => {
-                const amount = MASTERNODE_DASH_AMOUNT * configGroup.length;
+                const amount = HPMN_COLLATERAL_AMOUNT * configGroup.length;
                 return generateToAddressTask(
                   configGroup.find((c) => c.getName() === 'local_seed'),
                   amount,
@@ -160,15 +163,8 @@ function configureCoreTaskFactory(
               task: async () => {
                 const masternodeConfigs = configGroup.filter((config) => config.get('core.masternode.enable'));
 
-                const subTasks = masternodeConfigs.map((config, masternodeNumber) => ({
+                const subTasks = masternodeConfigs.map((config, index) => ({
                   title: `Register ${config.getName()} masternode`,
-                  skip: () => {
-                    if (config.get('core.masternode.operator.privateKey')) {
-                      return `Masternode operator private key ('core.masternode.operator.privateKey') is already set in ${config.getName()} config`;
-                    }
-
-                    return false;
-                  },
                   task: () => new Listr([
                     {
                       title: 'Generate a masternode operator key',
@@ -188,7 +184,7 @@ function configureCoreTaskFactory(
                     },
                     {
                       // first masternode has 10% operatorReward
-                      task: () => registerMasternodeTask(config, masternodeNumber === 0 ? 10 : 0),
+                      task: () => registerMasternodeTask(config, true, index === 0 ? '10.00' : '0.00'),
                     },
                   ]),
                 }));
