@@ -1,7 +1,16 @@
-use dapi_grpc::platform::v0::{self as grpc, GetIdentityRequest, GetIdentityResponse};
+use dapi_grpc::platform::v0::{
+    self as grpc, get_documents_request::Start, GetDocumentsRequest, GetIdentityRequest,
+    GetIdentityResponse,
+};
 use dpp::{
     identity::PartialIdentity,
+    platform_value::Value,
     prelude::{DataContract, Identity},
+};
+use drive::{
+    contract::DocumentType,
+    error::query::QuerySyntaxError,
+    query::{ordering::OrderClauses, DriveQuery, InternalClauses},
 };
 use drive_proof_verifier::proof::from_proof::{
     DataContractHistory, DataContracts, FromProof, Identities, IdentitiesByPublicKeyHashes,
@@ -432,5 +441,67 @@ impl<K, T> Length for Vec<(K, Option<T>)> {
         self.into_iter()
             .map(|(_k, v)| v.as_ref().map(|_t| 1).unwrap_or(0))
             .sum()
+    }
+}
+
+pub trait ToDriveQuery<'a> {
+    // type Output=DriveQuery<'a>;
+    fn to_drive_query(
+        &self,
+        contract: &'a DataContract,
+        document_type: &'a DocumentType,
+    ) -> DriveQuery<'a>;
+}
+
+impl<'a> ToDriveQuery<'a> for GetDocumentsRequest {
+    fn to_drive_query(
+        &self,
+        contract: &'a DataContract,
+        document_type: &'a DocumentType,
+    ) -> DriveQuery<'a> {
+        let limit = if self.limit > 0 {
+            Some(self.limit as u16)
+        } else {
+            None
+        };
+
+        let mut start_at_included = false;
+        let start_at: Option<[u8; 32]> = match self.start.as_ref() {
+            None => None,
+            Some(Start::StartAfter(v)) => {
+                start_at_included = false;
+                let id: [u8; 32] = v[..].try_into().expect("must be 32 bytes");
+                Some(id)
+            }
+            Some(Start::StartAt(v)) => {
+                start_at_included = true;
+                let id: [u8; 32] = v[..].try_into().expect("must be 32 bytes");
+                Some(id)
+            }
+        };
+
+        let mut reader = std::io::Cursor::new(&self.order_by);
+        let order_by: OrderClauses = ciborium::de::from_reader::<Value, _>(&mut reader)
+            .expect("order clause cbor must be correct")
+            .try_into()
+            .expect("orderBy clauses must be correct");
+
+        let mut reader = std::io::Cursor::new(&self.r#where);
+        let internal_clauses = ciborium::de::from_reader::<Value, _>(&mut reader)
+            .expect("cbor must hold a Value")
+            .try_into()
+            .expect("internal clauses must be correct");
+
+        DriveQuery {
+            contract,
+            document_type,
+            internal_clauses,
+            limit,
+            offset: None,
+            order_by: order_by.into(),
+            start_at,
+            start_at_included,
+            block_time_ms: None,
+        }
     }
 }

@@ -74,6 +74,10 @@ pub enum QuerySyntaxError {
     #[error("query invalid format for where clause error: {0}")]
     InvalidFormatWhereClause(&'static str),
 
+    /// Query invalid format for order clause error
+    #[error("query invalid format for order clause error: {0}")]
+    InvalidFormatOrderClause(&'static str),
+
     /// Conflicting conditions error
     #[error("conflicting conditions error: {0}")]
     ConflictingConditions(&'static str),

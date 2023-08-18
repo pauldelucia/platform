@@ -32,6 +32,9 @@
 
 use dpp::platform_value::Value;
 use grovedb::Error;
+use indexmap::IndexMap;
+
+use crate::error::query::QuerySyntaxError;
 
 /// Order clause struct
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -78,5 +81,37 @@ impl<'a> OrderClause {
         };
 
         Ok(OrderClause { field, ascending })
+    }
+}
+
+/// Wrapper for multiple order clauses
+pub struct OrderClauses(pub Vec<OrderClause>);
+
+impl From<OrderClauses> for IndexMap<String, OrderClause> {
+    fn from(value: OrderClauses) -> Self {
+        value.0.into_iter().map(|v| (v.field.clone(), v)).collect()
+    }
+}
+
+impl TryFrom<Value> for OrderClauses {
+    type Error = crate::error::Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let mut clauses = Vec::new();
+        for order_clause in value.into_array()? {
+            let item = if let Value::Array(clauses_components) = order_clause {
+                OrderClause::from_components(&clauses_components).map_err(|_e| {
+                    Self::Error::Query(QuerySyntaxError::InvalidFormatOrderClause(
+                        "orderBy clause is invalid",
+                    ))
+                })
+            } else {
+                Err(Self::Error::Query(
+                    QuerySyntaxError::InvalidFormatOrderClause("orderBy clause must be an array"),
+                ))
+            }?;
+            clauses.push(item);
+        }
+
+        Ok(Self(clauses))
     }
 }

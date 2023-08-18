@@ -249,6 +249,25 @@ impl InternalClauses {
     }
 }
 
+impl TryFrom<Value> for InternalClauses {
+    type Error = crate::error::Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let mut all_where_clauses = Vec::new();
+
+        for where_clause in value.into_array()? {
+            let clause_components = where_clause.into_array().map_err(|_| {
+                Self::Error::Query(QuerySyntaxError::InvalidFormatWhereClause(
+                    "where clause is not a valid array",
+                ))
+            })?;
+
+            all_where_clauses.push(WhereClause::from_components(&clause_components)?);
+        }
+
+        Self::extract_from_clauses(all_where_clauses)
+    }
+}
+
 #[cfg(any(feature = "full", feature = "verify"))]
 /// The encoding returned by queries
 #[derive(Debug, PartialEq)]
