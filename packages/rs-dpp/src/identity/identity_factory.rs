@@ -19,7 +19,6 @@ use crate::consensus::basic::BasicError;
 use crate::consensus::ConsensusError;
 #[cfg(all(feature = "state-transitions", feature = "client"))]
 use crate::identity::accessors::IdentityGettersV0;
-
 #[cfg(all(feature = "validation", feature = "identity-value-conversion"))]
 use crate::identity::conversion::platform_value::IdentityPlatformValueConversionMethodsV0;
 #[cfg(all(feature = "identity-serialization", feature = "client"))]
@@ -95,7 +94,7 @@ impl IdentityFactory {
     pub fn create_from_buffer(
         &self,
         buffer: Vec<u8>,
-        #[cfg(feature = "validation")] skip_validation: bool,
+        #[cfg(all(feature = "validation", feature = "identity-value-conversion"))] skip_validation: bool,
     ) -> Result<Identity, ProtocolError> {
         let identity: Identity =
             Identity::deserialize_from_bytes_no_limit(&buffer).map_err(|e| {
@@ -104,7 +103,7 @@ impl IdentityFactory {
                 ))
             })?;
 
-        #[cfg(feature = "validation")]
+        #[cfg(all(feature = "validation", feature = "identity-value-conversion"))]
         if !skip_validation {
             self.validate_identity(&identity.to_cleaned_object()?)?;
         }
