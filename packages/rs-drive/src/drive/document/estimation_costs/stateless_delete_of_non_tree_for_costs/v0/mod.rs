@@ -14,7 +14,7 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 impl Drive {
-    /// Deletes an element in a stateless manner for computing costs.
+    /// Attempts a stateless deletion of non-tree elements for costs estimation.
     ///
     /// This function performs a stateless delete operation, specifically for 
     /// computing costs in GroveDB.

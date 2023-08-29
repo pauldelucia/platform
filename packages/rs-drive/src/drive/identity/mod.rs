@@ -72,13 +72,21 @@ pub use withdrawals::paths::add_initial_withdrawal_state_structure_operations;
 #[cfg(any(feature = "full", feature = "verify"))]
 pub use fetch::queries::*;
 
+<<<<<<< HEAD
 /// Identity path
+=======
+/// identity path
+>>>>>>> 6ac041d9e (feat: add docs)
 #[cfg(any(feature = "full", feature = "verify"))]
 pub(crate) fn identity_path(identity_id: &[u8]) -> [&[u8]; 2] {
     [Into::<&[u8; 1]>::into(RootTree::Identities), identity_id]
 }
 
+<<<<<<< HEAD
 /// Identity path vector
+=======
+/// identity path vec
+>>>>>>> 6ac041d9e (feat: add docs)
 #[cfg(any(feature = "full", feature = "verify"))]
 pub(crate) fn identity_path_vec(identity_id: &[u8]) -> Vec<Vec<u8>> {
     vec![
